@@ -69,7 +69,7 @@ function MoviesPage() {
         </div>
       )}
 
-      {editing && <MovieDialog initial={editing} onClose={() => setEditing(null)} onSave={(v) => saveM.mutate(v)} busy={saveM.isPending} />}
+      {editing && <MovieDialog initial={editing} onClose={() => setEditing(null)} onSave={(v: any) => saveM.mutate(v)} busy={saveM.isPending} />}
     </div>
   );
 }
