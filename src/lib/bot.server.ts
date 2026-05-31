@@ -32,61 +32,70 @@ async function setState(botUserId: string, state: string | null) {
 }
 
 async function upsertUser(u: TgUser) {
-  const { data: existing } = await sb()
-    .from("bot_users")
-    .select("*")
-    .eq("telegram_id", u.id)
-    .maybeSingle();
-  if (existing) {
-    await sb()
+  console.log(`Upserting user: ${u.id} (@${u.username || "no_username"})`);
+  try {
+    const { data: existing, error: selectError } = await sb()
       .from("bot_users")
-      .update({
+      .select("*")
+      .eq("telegram_id", u.id)
+      .maybeSingle();
+    
+    if (selectError) {
+      console.error("Error selecting user from bot_users:", selectError);
+      throw selectError;
+    }
+
+    if (existing) {
+      console.log(`User ${u.id} exists, updating...`);
+      const { error: updateError } = await sb()
+        .from("bot_users")
+        .update({
+          username: u.username,
+          first_name: u.first_name,
+          last_name: u.last_name,
+          language_code: u.language_code,
+          last_activity_at: new Date().toISOString(),
+        })
+        .eq("id", existing.id);
+      
+      if (updateError) {
+        console.error("Error updating user in bot_users:", updateError);
+        throw updateError;
+      }
+      return existing;
+    }
+
+    console.log(`User ${u.id} is new, inserting...`);
+    const { data: created, error: insertError } = await sb()
+      .from("bot_users")
+      .insert({
+        telegram_id: u.id,
         username: u.username,
         first_name: u.first_name,
         last_name: u.last_name,
         language_code: u.language_code,
-        last_activity_at: new Date().toISOString(),
       })
-      .eq("id", existing.id);
-    return existing;
+      .select("*")
+      .single();
+    
+    if (insertError) {
+      console.error("Error inserting user into bot_users:", insertError);
+      throw insertError;
+    }
+    return created!;
+  } catch (err) {
+    console.error("Catch-all error in upsertUser:", err);
+    throw err;
   }
-  const { data: created } = await sb()
-    .from("bot_users")
-    .insert({
-      telegram_id: u.id,
-      username: u.username,
-      first_name: u.first_name,
-      last_name: u.last_name,
-      language_code: u.language_code,
-    })
-    .select("*")
-    .single();
-  return created!;
 }
 
-function fmtMovieCaption(m: any) {
-  const lines = [
-    `🎬 <b>${escapeHtml(m.title)}</b>`,
-    m.country ? `🌍 ${escapeHtml(m.country)}` : null,
-    m.year ? `📅 ${m.year}` : null,
-    m.genre ? `🎭 ${escapeHtml(m.genre)}` : null,
-    m.imdb_rating ? `⭐ IMDb ${m.imdb_rating}` : null,
-    m.quality ? `🎞 ${escapeHtml(m.quality)}` : null,
-    m.language ? `🔤 ${escapeHtml(m.language)}` : null,
-    m.duration_minutes ? `⏱ ${m.duration_minutes} min` : null,
-  ].filter(Boolean);
-  if (m.description) lines.push("", escapeHtml(m.description));
-  return lines.join("\n");
-}
-
-function escapeHtml(s: string) {
-  return String(s ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]!));
-}
+// ... fmtMovieCaption and escapeHtml ...
 
 async function deliverMovieByCode(chatId: number, botUser: any, rawCode: string) {
   try {
     const code = rawCode.trim();
-    console.log(`Delivering movie for code: ${code} to chatId: ${chatId}`);
+    console.log(`Delivering movie for code: "${code}" to chatId: ${chatId}`);
+// ... rest of deliverMovieByCode ...
 
     const { data: codeRow, error: codeError } = await sb()
       .from("movie_codes")
