@@ -187,7 +187,7 @@ export async function handleUpdate(update: any) {
   const msg = update.message ?? update.edited_message;
   if (!msg?.from) return;
   const from = msg.from as TgUser;
-  if (from.is_bot) return;
+  if ((from as any).is_bot) return;
   const chatId = msg.chat.id as number;
   const botUser = await upsertUser(from);
 
