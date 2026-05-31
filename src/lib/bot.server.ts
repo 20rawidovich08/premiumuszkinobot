@@ -84,63 +84,93 @@ function escapeHtml(s: string) {
 }
 
 async function deliverMovieByCode(chatId: number, botUser: any, rawCode: string) {
-  const code = rawCode.trim();
-  const { data: codeRow } = await sb()
-    .from("movie_codes")
-    .select("*, movie:movies(*)")
-    .eq("code", code)
-    .eq("is_active", true)
-    .maybeSingle();
-  if (!codeRow || !codeRow.movie) {
-    await sendMessage(chatId, "❌ Bunday kod topilmadi yoki muddati tugagan.");
-    return;
-  }
-  if (codeRow.mode === "single" && codeRow.uses_count >= 1) {
-    await sendMessage(chatId, "❌ Bu kod allaqachon ishlatilgan.");
-    return;
-  }
-  if (codeRow.mode === "limited" && codeRow.max_uses && codeRow.uses_count >= codeRow.max_uses) {
-    await sendMessage(chatId, "❌ Bu kodning aktivatsiyalari tugadi.");
-    return;
-  }
-  const movie = codeRow.movie as any;
-  const caption = fmtMovieCaption(movie);
-  if (movie.poster_url) {
-    await sendPhoto(chatId, movie.poster_url, caption);
-  } else {
-    await sendMessage(chatId, caption);
-  }
-  if (movie.telegram_file_id) {
-    await sendVideo(chatId, movie.telegram_file_id, `🎬 ${escapeHtml(movie.title)}`);
-  } else {
-    await sendMessage(chatId, "⚠️ Video hali yuklanmagan.");
-  }
-  // record usage + view
-  await sb()
-    .from("movie_codes")
-    .update({
-      uses_count: codeRow.uses_count + 1,
-      is_active:
-        codeRow.mode === "single"
-          ? false
-          : codeRow.mode === "limited" && codeRow.max_uses && codeRow.uses_count + 1 >= codeRow.max_uses
+  try {
+    const code = rawCode.trim();
+    console.log(`Delivering movie for code: ${code} to chatId: ${chatId}`);
+
+    const { data: codeRow, error: codeError } = await sb()
+      .from("movie_codes")
+      .select("*, movie:movies(*)")
+      .eq("code", code)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (codeError) throw codeError;
+
+    if (!codeRow || !codeRow.movie) {
+      await sendMessage(chatId, "❌ Kechirasiz, bunday kod topilmadi yoki bu kod endi faol emas. Iltimos, kodni qayta tekshirib ko'ring.");
+      return;
+    }
+
+    if (codeRow.mode === "single" && codeRow.uses_count >= 1) {
+      await sendMessage(chatId, "❌ Bu bir martalik kod allaqachon ishlatilgan.");
+      return;
+    }
+
+    if (codeRow.mode === "limited" && codeRow.max_uses && codeRow.uses_count >= codeRow.max_uses) {
+      await sendMessage(chatId, "❌ Bu kodning foydalanish limiti tugagan.");
+      return;
+    }
+
+    const movie = codeRow.movie as any;
+    const caption = fmtMovieCaption(movie);
+
+    if (movie.poster_url) {
+      try {
+        await sendPhoto(chatId, movie.poster_url, caption);
+      } catch (e) {
+        console.error("Failed to send photo, sending text instead:", e);
+        await sendMessage(chatId, caption);
+      }
+    } else {
+      await sendMessage(chatId, caption);
+    }
+
+    if (movie.telegram_file_id) {
+      try {
+        await sendVideo(chatId, movie.telegram_file_id, `🎬 <b>${escapeHtml(movie.title)}</b>`);
+      } catch (e) {
+        console.error("Failed to send video:", e);
+        await sendMessage(chatId, "⚠️ Videoni yuborishda xatolik yuz berdi. Iltimos, keyinroq qayta urinib ko'ring.");
+      }
+    } else {
+      await sendMessage(chatId, "⚠️ Bu kino uchun video fayl hali yuklanmagan.");
+    }
+
+    // record usage + view
+    await sb()
+      .from("movie_codes")
+      .update({
+        uses_count: codeRow.uses_count + 1,
+        is_active:
+          codeRow.mode === "single"
             ? false
-            : true,
-    })
-    .eq("id", codeRow.id);
-  await sb().from("movie_views").insert({
-    movie_id: movie.id,
-    bot_user_id: botUser.id,
-    code_id: codeRow.id,
-  });
-  await sb()
-    .from("movies")
-    .update({ views_count: (movie.views_count ?? 0) + 1 })
-    .eq("id", movie.id);
-  await sb()
-    .from("bot_users")
-    .update({ movies_watched: (botUser.movies_watched ?? 0) + 1 })
-    .eq("id", botUser.id);
+            : codeRow.mode === "limited" && codeRow.max_uses && codeRow.uses_count + 1 >= codeRow.max_uses
+              ? false
+              : true,
+      })
+      .eq("id", codeRow.id);
+
+    await sb().from("movie_views").insert({
+      movie_id: movie.id,
+      bot_user_id: botUser.id,
+      code_id: codeRow.id,
+    });
+
+    await sb()
+      .from("movies")
+      .update({ views_count: (movie.views_count ?? 0) + 1 })
+      .eq("id", movie.id);
+
+    await sb()
+      .from("bot_users")
+      .update({ movies_watched: (botUser.movies_watched ?? 0) + 1 })
+      .eq("id", botUser.id);
+      
+  } catch (error) {
+    console.error("Error in deliverMovieByCode:", error);
+    await sendMessage(chatId, "❌ Texnik xatolik yuz berdi. Iltimos, birozdan so'ng qayta urinib ko'ring.");
+  }
 }
 
 async function showProfile(chatId: number, botUser: any) {
