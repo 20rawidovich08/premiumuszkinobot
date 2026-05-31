@@ -279,8 +279,7 @@ export const installWebhook = createServerFn({ method: "POST" })
   .inputValidator(z.object({ url: z.string().url() }))
   .handler(async ({ data, context }) => {
     await assertAdmin(context.userId);
-    const secret = process.env.TELEGRAM_WEBHOOK_SECRET;
-    if (!secret) throw new Error("TELEGRAM_WEBHOOK_SECRET not configured");
+    const secret = process.env.TELEGRAM_WEBHOOK_SECRET ?? "";
     const res = await setWebhookUrl(data.url, secret);
     return { ok: true, res };
   });
