@@ -35,16 +35,16 @@ function MoviesPage() {
   return (
     <div className="p-8 space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Movies</h1>
+        <h1 className="text-3xl font-bold">Kinolar</h1>
         <button onClick={() => setEditing({})} className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
-          <Plus className="h-4 w-4" /> Add Movie
+          <Plus className="h-4 w-4" /> Kino qo‘shish
         </button>
       </div>
-      {isLoading ? <p className="text-muted-foreground">Loading…</p> : (
+      {isLoading ? <p className="text-muted-foreground">Yuklanmoqda…</p> : (
         <div className="glass-card rounded-xl overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-muted/40 text-left">
-              <tr><th className="px-4 py-3">Title</th><th>Year</th><th>Genre</th><th>Views</th><th>Status</th><th></th></tr>
+              <tr><th className="px-4 py-3">Nomi</th><th>Yili</th><th>Janr</th><th>Ko‘rishlar</th><th>Holat</th><th></th></tr>
             </thead>
             <tbody>
               {(data ?? []).map((m: any) => (
@@ -55,15 +55,15 @@ function MoviesPage() {
                   <td>{m.year ?? "—"}</td>
                   <td className="text-muted-foreground">{m.genre ?? "—"}</td>
                   <td>{m.views_count}</td>
-                  <td>{m.is_published ? "Published" : "Draft"}</td>
+                  <td>{m.is_published ? "Eʼlon qilingan" : "Qoralama"}</td>
                   <td className="text-right pr-3">
-                    <button onClick={() => postM.mutate(m.id)} title="Post to channel" className="p-2 hover:text-primary"><Send className="h-4 w-4" /></button>
+                    <button onClick={() => postM.mutate(m.id)} title="Kanalga yuborish" className="p-2 hover:text-primary"><Send className="h-4 w-4" /></button>
                     <button onClick={() => setEditing(m)} className="p-2 hover:text-primary"><Pencil className="h-4 w-4" /></button>
                     <button onClick={() => confirm("O'chirish?") && delM.mutate(m.id)} className="p-2 hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
                   </td>
                 </tr>
               ))}
-              {!data?.length && <tr><td colSpan={6} className="text-center py-10 text-muted-foreground">No movies yet.</td></tr>}
+              {!data?.length && <tr><td colSpan={6} className="text-center py-10 text-muted-foreground">Hali kino yo‘q.</td></tr>}
             </tbody>
           </table>
         </div>
@@ -78,17 +78,17 @@ function MovieDialog({ initial, onClose, onSave, busy }: any) {
   const [f, setF] = useState<any>({ is_published: true, ...initial });
   const upd = (k: string, v: any) => setF((p: any) => ({ ...p, [k]: v }));
   const fields: [string, string, string?][] = [
-    ["title", "Title *"], ["description", "Description", "textarea"],
+    ["title", "Nomi *"], ["description", "Tavsif", "textarea"],
     ["poster_url", "Poster URL"], ["header_url", "Header banner URL"],
-    ["telegram_file_id", "Telegram video file_id"], ["trailer_url", "Trailer URL"],
-    ["country", "Country"], ["year", "Year", "number"], ["genre", "Genre"],
-    ["imdb_rating", "IMDb", "number"], ["language", "Language"],
-    ["quality", "Quality"], ["duration_minutes", "Duration (min)", "number"],
+    ["telegram_file_id", "Telegram video file_id"], ["trailer_url", "Treyler URL"],
+    ["country", "Davlat"], ["year", "Yili", "number"], ["genre", "Janr"],
+    ["imdb_rating", "IMDb", "number"], ["language", "Til"],
+    ["quality", "Sifat"], ["duration_minutes", "Davomiyligi (daq)", "number"],
   ];
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
       <div className="glass-card rounded-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
-        <h2 className="text-xl font-bold mb-4">{initial?.id ? "Edit movie" : "New movie"}</h2>
+        <h2 className="text-xl font-bold mb-4">{initial?.id ? "Kinoni tahrirlash" : "Yangi kino"}</h2>
         <div className="grid grid-cols-2 gap-3">
           {fields.map(([k, label, t]) => (
             <div key={k} className={t === "textarea" ? "col-span-2" : ""}>
@@ -102,12 +102,12 @@ function MovieDialog({ initial, onClose, onSave, busy }: any) {
           ))}
           <label className="col-span-2 flex items-center gap-2 text-sm">
             <input type="checkbox" checked={!!f.is_published} onChange={(e) => upd("is_published", e.target.checked)} />
-            Published
+            Eʼlon qilingan
           </label>
         </div>
         <div className="mt-6 flex justify-end gap-2">
-          <button onClick={onClose} className="rounded-md border border-border px-4 py-2 text-sm">Cancel</button>
-          <button disabled={busy} onClick={() => onSave(f)} className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-60">Save</button>
+          <button onClick={onClose} className="rounded-md border border-border px-4 py-2 text-sm">Bekor qilish</button>
+          <button disabled={busy} onClick={() => onSave(f)} className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-60">Saqlash</button>
         </div>
       </div>
     </div>
