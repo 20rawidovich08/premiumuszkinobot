@@ -29,53 +29,53 @@ function MovieDetail() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  if (!data?.movie) return <div className="p-8">Loading…</div>;
+  if (!data?.movie) return <div className="p-8">Yuklanmoqda…</div>;
   const m = data.movie;
   return (
     <div className="p-8 space-y-6">
-      <Link to="/admin/movies" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /> Back</Link>
+      <Link to="/admin/movies" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /> Orqaga</Link>
       <div className="glass-card rounded-xl p-6 flex gap-6">
         {m.poster_url && <img src={m.poster_url} alt={m.title} className="w-32 h-48 object-cover rounded-md" />}
         <div className="flex-1">
           <h1 className="text-2xl font-bold">{m.title}</h1>
           <p className="text-sm text-muted-foreground mt-1">{m.year} • {m.genre} • {m.country} • ⭐ {m.imdb_rating ?? "—"}</p>
           <p className="mt-3 text-sm">{m.description}</p>
-          <button onClick={() => post({ data: { movie_id: id } }).then(() => toast.success("Kanalga yuborildi")).catch((e: any) => toast.error(e.message))} className="mt-4 inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground"><Send className="h-4 w-4" /> Post to channel</button>
+          <button onClick={() => post({ data: { movie_id: id } }).then(() => toast.success("Kanalga yuborildi")).catch((e: any) => toast.error(e.message))} className="mt-4 inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground"><Send className="h-4 w-4" /> Kanalga yuborish</button>
         </div>
       </div>
 
       <div className="glass-card rounded-xl p-6">
-        <h2 className="font-semibold mb-4">Generate codes</h2>
+        <h2 className="font-semibold mb-4">Kod yaratish</h2>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <div>
-            <label className="text-xs text-muted-foreground">Mode</label>
+            <label className="text-xs text-muted-foreground">Rejim</label>
             <select value={mode} onChange={(e) => setMode(e.target.value as any)} className="mt-1 w-full rounded-md border border-border bg-input px-3 py-2 text-sm">
-              <option value="unlimited">Unlimited</option>
-              <option value="single">Single use</option>
-              <option value="limited">Limited</option>
+              <option value="unlimited">Cheksiz</option>
+              <option value="single">Bir martalik</option>
+              <option value="limited">Limitli</option>
             </select>
           </div>
           {mode === "limited" && (
             <div>
-              <label className="text-xs text-muted-foreground">Max uses</label>
+              <label className="text-xs text-muted-foreground">Maksimal foydalanish</label>
               <input type="number" value={maxUses} onChange={(e) => setMaxUses(+e.target.value)} className="mt-1 w-full rounded-md border border-border bg-input px-3 py-2 text-sm" />
             </div>
           )}
           <div>
-            <label className="text-xs text-muted-foreground">Bulk count</label>
+            <label className="text-xs text-muted-foreground">Soni</label>
             <input type="number" value={count} onChange={(e) => setCount(+e.target.value)} className="mt-1 w-full rounded-md border border-border bg-input px-3 py-2 text-sm" />
           </div>
           <div className="md:col-span-2">
-            <label className="text-xs text-muted-foreground">Custom code (overrides bulk)</label>
+            <label className="text-xs text-muted-foreground">Maxsus kod (sonini bekor qiladi)</label>
             <input value={custom} onChange={(e) => setCustom(e.target.value)} placeholder="e.g. TRANSFORMER01" className="mt-1 w-full rounded-md border border-border bg-input px-3 py-2 text-sm" />
           </div>
         </div>
-        <button onClick={() => mCreate.mutate()} disabled={mCreate.isPending} className="mt-4 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-60">Generate</button>
+        <button onClick={() => mCreate.mutate()} disabled={mCreate.isPending} className="mt-4 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-60">Yaratish</button>
       </div>
 
       <div className="glass-card rounded-xl overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-muted/40 text-left"><tr><th className="px-4 py-3">Code</th><th>Mode</th><th>Uses</th><th>Active</th><th></th></tr></thead>
+          <thead className="bg-muted/40 text-left"><tr><th className="px-4 py-3">Kod</th><th>Rejim</th><th>Ishlatildi</th><th>Faol</th><th></th></tr></thead>
           <tbody>
             {data.codes.map((c: any) => (
               <tr key={c.id} className="border-t border-border/40">
@@ -86,7 +86,7 @@ function MovieDetail() {
                 <td className="text-right pr-3"><button onClick={() => del({ data: { id: c.id } }).then(inv)} className="p-2 hover:text-destructive"><Trash2 className="h-4 w-4" /></button></td>
               </tr>
             ))}
-            {!data.codes.length && <tr><td colSpan={5} className="text-center py-8 text-muted-foreground">No codes yet.</td></tr>}
+            {!data.codes.length && <tr><td colSpan={5} className="text-center py-8 text-muted-foreground">Hali kod yo‘q.</td></tr>}
           </tbody>
         </table>
       </div>

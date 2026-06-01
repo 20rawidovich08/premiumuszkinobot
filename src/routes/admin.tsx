@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet, Link, useRouter, useRouterState, redirect } from "@tanstack/react-router";
+import { createFileRoute, Outlet, Link, useRouterState } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useNavigate } from "@tanstack/react-router";
@@ -7,11 +7,11 @@ import { LayoutDashboard, Film, Users, Inbox, Settings, LogOut } from "lucide-re
 export const Route = createFileRoute("/admin")({ component: AdminLayout });
 
 const nav = [
-  { to: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { to: "/admin/movies", label: "Movies", icon: Film },
-  { to: "/admin/users", label: "Users", icon: Users },
-  { to: "/admin/requests", label: "Requests", icon: Inbox },
-  { to: "/admin/settings", label: "Settings", icon: Settings },
+  { to: "/admin", label: "Boshqaruv", icon: LayoutDashboard, exact: true },
+  { to: "/admin/movies", label: "Kinolar", icon: Film },
+  { to: "/admin/users", label: "Foydalanuvchilar", icon: Users },
+  { to: "/admin/requests", label: "Buyurtmalar", icon: Inbox },
+  { to: "/admin/settings", label: "Sozlamalar", icon: Settings },
 ];
 
 function AdminLayout() {
@@ -24,7 +24,7 @@ function AdminLayout() {
   }, [loading, session, navigate]);
 
   if (loading || !session) {
-    return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;
+    return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Yuklanmoqda…</div>;
   }
 
   return (

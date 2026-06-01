@@ -1,4 +1,6 @@
 // Server-only Telegram Bot API helpers
+import { writeTelegramLog } from "./telegram-log.server";
+
 const TG_API = "https://api.telegram.org/bot";
 
 function token() {
@@ -15,13 +17,31 @@ export function channelId() {
   return process.env.TELEGRAM_CHANNEL_ID ?? "";
 }
 
+function redactPayload(body: Record<string, unknown>) {
+  const copy = { ...body };
+  if (copy.secret_token) copy.secret_token = "[yashirildi]";
+  return copy;
+}
+
 export async function tg<T = any>(method: string, body: Record<string, unknown>): Promise<T> {
+  const startedAt = Date.now();
   const res = await fetch(`${TG_API}${token()}/${method}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
   const json = await res.json() as any;
+  await writeTelegramLog({
+    kind: "telegram_api",
+    level: json.ok ? "info" : "error",
+    status: json.ok ? "ok" : "error",
+    telegram_method: method,
+    chat_id: (body.chat_id as number | string | undefined) ?? null,
+    request_payload: redactPayload(body),
+    response_payload: json,
+    error_message: json.ok ? null : JSON.stringify(json),
+    duration_ms: Date.now() - startedAt,
+  });
   if (!json.ok) throw new Error(`Telegram ${method} failed: ${JSON.stringify(json)}`);
   return json.result as T;
 }
@@ -36,6 +56,10 @@ export async function sendPhoto(chatId: number | string, photo: string, caption?
 
 export async function sendVideo(chatId: number | string, video: string, caption?: string, extra: Record<string, unknown> = {}) {
   return tg("sendVideo", { chat_id: chatId, video, caption, parse_mode: "HTML", ...extra });
+}
+
+export async function answerCallbackQuery(callbackQueryId: string, text?: string) {
+  return tg("answerCallbackQuery", { callback_query_id: callbackQueryId, text });
 }
 
 export async function setWebhookUrl(url: string, secret: string) {

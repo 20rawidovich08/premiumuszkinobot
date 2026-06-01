@@ -4,9 +4,11 @@ import {
   sendMessage,
   sendPhoto,
   sendVideo,
+  answerCallbackQuery,
   mainMenuKeyboard,
   deepLink,
 } from "./telegram.server";
+import { writeTelegramLog } from "./telegram-log.server";
 
 type TgUser = {
   id: number;
@@ -17,6 +19,27 @@ type TgUser = {
 };
 
 const sb = () => supabaseAdmin;
+
+function escapeHtml(value: unknown) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function fmtMovieCaption(movie: any) {
+  const meta = [movie.year, movie.genre, movie.country, movie.quality].filter(Boolean).join(" • ");
+  return [
+    `🎬 <b>${escapeHtml(movie.title)}</b>`,
+    meta ? `📌 ${escapeHtml(meta)}` : "",
+    movie.imdb_rating ? `⭐ IMDb: <b>${escapeHtml(movie.imdb_rating)}</b>` : "",
+    movie.duration_minutes ? `⏱ Davomiyligi: ${escapeHtml(movie.duration_minutes)} daqiqa` : "",
+    movie.language ? `🌐 Til: ${escapeHtml(movie.language)}` : "",
+    movie.description ? `\n${escapeHtml(movie.description)}` : "",
+  ].filter(Boolean).join("\n");
+}
 
 // userState: waiting for movie request name, code entry, etc.
 async function getState(botUserId: string): Promise<string | null> {
@@ -223,8 +246,33 @@ async function showTop(chatId: number) {
 }
 
 export async function handleUpdate(update: any) {
+  const callback = update.callback_query;
+  if (callback) {
+    await writeTelegramLog({
+      kind: "callback",
+      status: "ok",
+      update_id: update.update_id,
+      chat_id: callback.message?.chat?.id ?? null,
+      telegram_user_id: callback.from?.id ?? null,
+      callback_data: callback.data ?? null,
+      request_payload: update,
+    });
+    await answerCallbackQuery(callback.id, "Qabul qilindi");
+    if (callback.data?.startsWith("code:")) {
+      const chatId = callback.message?.chat?.id;
+      if (chatId && callback.from) {
+        const botUser = await upsertUser(callback.from as TgUser);
+        await deliverMovieByCode(chatId, botUser, callback.data.slice(5));
+      }
+    }
+    return;
+  }
+
   const msg = update.message ?? update.edited_message;
-  if (!msg?.from) return;
+  if (!msg?.from) {
+    await writeTelegramLog({ kind: "webhook", status: "ignored", update_id: update.update_id, request_payload: update, error_message: "Xabar foydalanuvchidan kelmagan yoki qo‘llab-quvvatlanmaydigan update" });
+    return;
+  }
   const from = msg.from as TgUser;
   if ((from as any).is_bot) return;
   const chatId = msg.chat.id as number;
@@ -234,7 +282,7 @@ export async function handleUpdate(update: any) {
 
   // /start [param]
   if (text.startsWith("/start")) {
-    const param = text.split(" ").slice(1).join(" ").trim();
+    const param = text.replace(/^\/start(?:=|\s+)?/i, "").trim();
     if (param) {
       await deliverMovieByCode(chatId, botUser, param);
       return;
