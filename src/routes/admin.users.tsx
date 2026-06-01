@@ -10,11 +10,11 @@ function UsersPage() {
   const { data } = useQuery({ queryKey: ["bot_users"], queryFn: () => fn() });
   return (
     <div className="p-8 space-y-6">
-      <h1 className="text-3xl font-bold">Bot Users</h1>
+      <h1 className="text-3xl font-bold">Bot foydalanuvchilari</h1>
       <div className="glass-card rounded-xl overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-muted/40 text-left">
-            <tr><th className="px-4 py-3">Telegram ID</th><th>Name</th><th>Username</th><th>Movies</th><th>Joined</th><th>Last activity</th></tr>
+            <tr><th className="px-4 py-3">Telegram ID</th><th>Ism</th><th>Username</th><th>Kinolar</th><th>Qo‘shilgan</th><th>So‘nggi faollik</th></tr>
           </thead>
           <tbody>
             {(data ?? []).map((u: any) => (
@@ -27,7 +27,7 @@ function UsersPage() {
                 <td className="text-muted-foreground">{new Date(u.last_activity_at).toLocaleString()}</td>
               </tr>
             ))}
-            {!data?.length && <tr><td colSpan={6} className="text-center py-10 text-muted-foreground">No users yet.</td></tr>}
+            {!data?.length && <tr><td colSpan={6} className="text-center py-10 text-muted-foreground">Hali foydalanuvchi yo‘q.</td></tr>}
           </tbody>
         </table>
       </div>
