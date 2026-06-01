@@ -291,6 +291,20 @@ export const checkWebhook = createServerFn({ method: "GET" })
     return await getWebhookInfo();
   });
 
+export const listTelegramLogs = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(z.object({ limit: z.coerce.number().int().min(1).max(200).default(80) }).optional())
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    const { data: rows, error } = await (supabaseAdmin as any)
+      .from("telegram_logs")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(data?.limit ?? 80);
+    if (error) throw error;
+    return rows ?? [];
+  });
+
 // ============ ME ============
 export const getMe = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
