@@ -17,6 +17,12 @@ export function channelId() {
   return process.env.TELEGRAM_CHANNEL_ID ?? "";
 }
 
+function redactPayload(body: Record<string, unknown>) {
+  const copy = { ...body };
+  if (copy.secret_token) copy.secret_token = "[yashirildi]";
+  return copy;
+}
+
 export async function tg<T = any>(method: string, body: Record<string, unknown>): Promise<T> {
   const startedAt = Date.now();
   const res = await fetch(`${TG_API}${token()}/${method}`, {
@@ -31,7 +37,7 @@ export async function tg<T = any>(method: string, body: Record<string, unknown>)
     status: json.ok ? "ok" : "error",
     telegram_method: method,
     chat_id: (body.chat_id as number | string | undefined) ?? null,
-    request_payload: body,
+    request_payload: redactPayload(body),
     response_payload: json,
     error_message: json.ok ? null : JSON.stringify(json),
     duration_ms: Date.now() - startedAt,
