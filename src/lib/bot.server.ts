@@ -246,8 +246,33 @@ async function showTop(chatId: number) {
 }
 
 export async function handleUpdate(update: any) {
+  const callback = update.callback_query;
+  if (callback) {
+    await writeTelegramLog({
+      kind: "callback",
+      status: "ok",
+      update_id: update.update_id,
+      chat_id: callback.message?.chat?.id ?? null,
+      telegram_user_id: callback.from?.id ?? null,
+      callback_data: callback.data ?? null,
+      request_payload: update,
+    });
+    await answerCallbackQuery(callback.id, "Qabul qilindi");
+    if (callback.data?.startsWith("code:")) {
+      const chatId = callback.message?.chat?.id;
+      if (chatId && callback.from) {
+        const botUser = await upsertUser(callback.from as TgUser);
+        await deliverMovieByCode(chatId, botUser, callback.data.slice(5));
+      }
+    }
+    return;
+  }
+
   const msg = update.message ?? update.edited_message;
-  if (!msg?.from) return;
+  if (!msg?.from) {
+    await writeTelegramLog({ kind: "webhook", status: "ignored", update_id: update.update_id, request_payload: update, error_message: "Xabar foydalanuvchidan kelmagan yoki qo‘llab-quvvatlanmaydigan update" });
+    return;
+  }
   const from = msg.from as TgUser;
   if ((from as any).is_bot) return;
   const chatId = msg.chat.id as number;
@@ -257,7 +282,7 @@ export async function handleUpdate(update: any) {
 
   // /start [param]
   if (text.startsWith("/start")) {
-    const param = text.split(" ").slice(1).join(" ").trim();
+    const param = text.replace(/^\/start(?:=|\s+)?/i, "").trim();
     if (param) {
       await deliverMovieByCode(chatId, botUser, param);
       return;
