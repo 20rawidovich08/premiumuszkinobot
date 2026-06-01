@@ -40,12 +40,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "CineBot Admin — Telegram Movie Platform" },
-      { name: "description", content: "Telegram Movie Bot admin panel and distribution platform." },
-      { property: "og:title", content: "CineBot Admin — Telegram Movie Platform" },
-      { name: "twitter:title", content: "CineBot Admin — Telegram Movie Platform" },
-      { property: "og:description", content: "Telegram Movie Bot admin panel and distribution platform." },
-      { name: "twitter:description", content: "Telegram Movie Bot admin panel and distribution platform." },
+      { title: "CineBot Admin — Telegram kino platformasi" },
+      { name: "description", content: "Telegram kino bot admin paneli va tarqatish platformasi." },
+      { property: "og:title", content: "CineBot Admin — Telegram kino platformasi" },
+      { name: "twitter:title", content: "CineBot Admin — Telegram kino platformasi" },
+      { property: "og:description", content: "Telegram kino bot admin paneli va tarqatish platformasi." },
+      { name: "twitter:description", content: "Telegram kino bot admin paneli va tarqatish platformasi." },
       { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/6e7b9dc9-76ef-43a7-834c-fd319acc4bc0/id-preview-0a20915a--7ecc254b-54a6-4e5a-8ed6-4a1138f6233d.lovable.app-1780227461806.png" },
       { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/6e7b9dc9-76ef-43a7-834c-fd319acc4bc0/id-preview-0a20915a--7ecc254b-54a6-4e5a-8ed6-4a1138f6233d.lovable.app-1780227461806.png" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -61,7 +61,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="uz" className="dark">
       <head><HeadContent /></head>
       <body className="dark">{children}<Scripts /></body>
     </html>
