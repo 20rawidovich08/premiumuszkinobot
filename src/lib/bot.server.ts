@@ -4,9 +4,11 @@ import {
   sendMessage,
   sendPhoto,
   sendVideo,
+  answerCallbackQuery,
   mainMenuKeyboard,
   deepLink,
 } from "./telegram.server";
+import { writeTelegramLog } from "./telegram-log.server";
 
 type TgUser = {
   id: number;
@@ -17,6 +19,27 @@ type TgUser = {
 };
 
 const sb = () => supabaseAdmin;
+
+function escapeHtml(value: unknown) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function fmtMovieCaption(movie: any) {
+  const meta = [movie.year, movie.genre, movie.country, movie.quality].filter(Boolean).join(" • ");
+  return [
+    `🎬 <b>${escapeHtml(movie.title)}</b>`,
+    meta ? `📌 ${escapeHtml(meta)}` : "",
+    movie.imdb_rating ? `⭐ IMDb: <b>${escapeHtml(movie.imdb_rating)}</b>` : "",
+    movie.duration_minutes ? `⏱ Davomiyligi: ${escapeHtml(movie.duration_minutes)} daqiqa` : "",
+    movie.language ? `🌐 Til: ${escapeHtml(movie.language)}` : "",
+    movie.description ? `\n${escapeHtml(movie.description)}` : "",
+  ].filter(Boolean).join("\n");
+}
 
 // userState: waiting for movie request name, code entry, etc.
 async function getState(botUserId: string): Promise<string | null> {
