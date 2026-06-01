@@ -321,6 +321,57 @@ export type Database = {
         }
         Relationships: []
       }
+      telegram_logs: {
+        Row: {
+          callback_data: string | null
+          chat_id: number | null
+          created_at: string
+          duration_ms: number | null
+          error_message: string | null
+          id: string
+          kind: string
+          level: string
+          request_payload: Json | null
+          response_payload: Json | null
+          status: string
+          telegram_method: string | null
+          telegram_user_id: number | null
+          update_id: number | null
+        }
+        Insert: {
+          callback_data?: string | null
+          chat_id?: number | null
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          kind?: string
+          level?: string
+          request_payload?: Json | null
+          response_payload?: Json | null
+          status?: string
+          telegram_method?: string | null
+          telegram_user_id?: number | null
+          update_id?: number | null
+        }
+        Update: {
+          callback_data?: string | null
+          chat_id?: number | null
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          kind?: string
+          level?: string
+          request_payload?: Json | null
+          response_payload?: Json | null
+          status?: string
+          telegram_method?: string | null
+          telegram_user_id?: number | null
+          update_id?: number | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
