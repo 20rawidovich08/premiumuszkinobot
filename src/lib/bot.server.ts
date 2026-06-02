@@ -416,6 +416,7 @@ export async function handleUpdate(update: any) {
   if (text === "🆕 Yangi kinolar") return showCatalog(chatId, "new", null, 0);
   if (text === "🏆 Top kinolar") return showCatalog(chatId, "top", null, 0);
   if (text === "🎭 Janrlar") return showGenres(chatId);
+  if (text === "📺 Seriallar") return showSeriesList(chatId, 0);
   if (text === "👤 Profilim") return showProfile(chatId, botUser);
   if (text === "📞 Admin bilan bog'lanish") {
     const { data } = await sb().from("bot_settings").select("value").eq("key", "admin_contact").maybeSingle();
