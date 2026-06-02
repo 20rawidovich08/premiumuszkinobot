@@ -88,8 +88,9 @@ export function mainMenuKeyboard() {
     keyboard: [
       [{ text: "🎬 Kino olish" }, { text: "🔎 Kod kiritish" }],
       [{ text: "🆕 Yangi kinolar" }, { text: "🏆 Top kinolar" }],
-      [{ text: "🎭 Janrlar" }, { text: "🎬 Kino buyurtma qilish" }],
-      [{ text: "👤 Profilim" }, { text: "📞 Admin bilan bog'lanish" }],
+      [{ text: "📺 Seriallar" }, { text: "🎭 Janrlar" }],
+      [{ text: "🎬 Kino buyurtma qilish" }, { text: "👤 Profilim" }],
+      [{ text: "📞 Admin bilan bog'lanish" }],
     ],
     resize_keyboard: true,
   };
