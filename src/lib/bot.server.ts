@@ -5,6 +5,7 @@ import {
   sendPhoto,
   sendVideo,
   answerCallbackQuery,
+  editMessageText,
   mainMenuKeyboard,
   deepLink,
 } from "./telegram.server";
