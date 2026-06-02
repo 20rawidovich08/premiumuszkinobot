@@ -340,6 +340,13 @@ export async function handleUpdate(update: any) {
     if (!chatId || !callback.from) return;
     const botUser = await upsertUser(callback.from as TgUser);
 
+    if (await isAdmin(callback.from.id) && data.startsWith("adm:")) {
+      if (await handleAdminCallback(chatId, messageId, botUser, data, callback.id)) return;
+    }
+    if (data.startsWith("ser:")) {
+      return handleSeriesCallback(chatId, messageId, botUser, data);
+    }
+
     if (data === "noop") return;
     if (data === "genres") return showGenres(chatId, messageId);
     if (data.startsWith("code:")) {
