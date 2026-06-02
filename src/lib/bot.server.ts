@@ -332,13 +332,27 @@ export async function handleUpdate(update: any) {
       callback_data: callback.data ?? null,
       request_payload: update,
     });
-    await answerCallbackQuery(callback.id, "Qabul qilindi");
-    if (callback.data?.startsWith("code:")) {
-      const chatId = callback.message?.chat?.id;
-      if (chatId && callback.from) {
-        const botUser = await upsertUser(callback.from as TgUser);
-        await deliverMovieByCode(chatId, botUser, callback.data.slice(5));
-      }
+    await answerCallbackQuery(callback.id);
+    const data = callback.data ?? "";
+    const chatId = callback.message?.chat?.id;
+    const messageId = callback.message?.message_id;
+    if (!chatId || !callback.from) return;
+    const botUser = await upsertUser(callback.from as TgUser);
+
+    if (data === "noop") return;
+    if (data === "genres") return showGenres(chatId, messageId);
+    if (data.startsWith("code:")) {
+      return deliverMovieByCode(chatId, botUser, data.slice(5));
+    }
+    if (data.startsWith("mv:")) {
+      return deliverMovieById(chatId, botUser, data.slice(3));
+    }
+    if (data.startsWith("cat:")) {
+      const [, sort, g, pageStr] = data.split(":");
+      const genre = g === "-" ? null : g;
+      const page = Math.max(0, parseInt(pageStr ?? "0", 10) || 0);
+      if (messageId) return editCatalog(chatId, messageId, sort as CatalogSort, genre, page);
+      return showCatalog(chatId, sort as CatalogSort, genre, page);
     }
     return;
   }
