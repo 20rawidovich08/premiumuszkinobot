@@ -375,6 +375,11 @@ export async function handleUpdate(update: any) {
   const chatId = msg.chat.id as number;
   const botUser = await upsertUser(from);
 
+  // Admin panel first
+  if (await isAdmin(from.id)) {
+    if (await handleAdminMessage(chatId, botUser, msg)) return;
+  }
+
   const text: string = msg.text ?? "";
 
   // /start [param]
