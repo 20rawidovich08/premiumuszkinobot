@@ -103,6 +103,47 @@ export type Database = {
           },
         ]
       }
+      episodes: {
+        Row: {
+          created_at: string
+          duration_minutes: number | null
+          episode_number: number
+          id: string
+          season_id: string
+          telegram_file_id: string | null
+          title: string | null
+          views_count: number
+        }
+        Insert: {
+          created_at?: string
+          duration_minutes?: number | null
+          episode_number: number
+          id?: string
+          season_id: string
+          telegram_file_id?: string | null
+          title?: string | null
+          views_count?: number
+        }
+        Update: {
+          created_at?: string
+          duration_minutes?: number | null
+          episode_number?: number
+          id?: string
+          season_id?: string
+          telegram_file_id?: string | null
+          title?: string | null
+          views_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "episodes_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       movie_codes: {
         Row: {
           code: string
@@ -318,6 +359,86 @@ export type Database = {
           id?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      seasons: {
+        Row: {
+          created_at: string
+          id: string
+          season_number: number
+          series_id: string
+          title: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          season_number: number
+          series_id: string
+          title?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          season_number?: number
+          series_id?: string
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seasons_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "series"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      series: {
+        Row: {
+          country: string | null
+          created_at: string
+          description: string | null
+          genre: string | null
+          id: string
+          imdb_rating: number | null
+          is_published: boolean
+          language: string | null
+          poster_url: string | null
+          title: string
+          updated_at: string
+          views_count: number
+          year: number | null
+        }
+        Insert: {
+          country?: string | null
+          created_at?: string
+          description?: string | null
+          genre?: string | null
+          id?: string
+          imdb_rating?: number | null
+          is_published?: boolean
+          language?: string | null
+          poster_url?: string | null
+          title: string
+          updated_at?: string
+          views_count?: number
+          year?: number | null
+        }
+        Update: {
+          country?: string | null
+          created_at?: string
+          description?: string | null
+          genre?: string | null
+          id?: string
+          imdb_rating?: number | null
+          is_published?: boolean
+          language?: string | null
+          poster_url?: string | null
+          title?: string
+          updated_at?: string
+          views_count?: number
+          year?: number | null
         }
         Relationships: []
       }
