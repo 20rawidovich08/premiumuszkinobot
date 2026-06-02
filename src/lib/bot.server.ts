@@ -386,8 +386,9 @@ export async function handleUpdate(update: any) {
     await sendMessage(chatId, "🔢 Kino kodini yuboring:");
     return;
   }
-  if (text === "🆕 Yangi kinolar") return showNew(chatId);
-  if (text === "🏆 Top kinolar") return showTop(chatId);
+  if (text === "🆕 Yangi kinolar") return showCatalog(chatId, "new", null, 0);
+  if (text === "🏆 Top kinolar") return showCatalog(chatId, "top", null, 0);
+  if (text === "🎭 Janrlar") return showGenres(chatId);
   if (text === "👤 Profilim") return showProfile(chatId, botUser);
   if (text === "📞 Admin bilan bog'lanish") {
     const { data } = await sb().from("bot_settings").select("value").eq("key", "admin_contact").maybeSingle();
