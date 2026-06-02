@@ -10,6 +10,7 @@ import {
   deepLink,
 } from "./telegram.server";
 import { writeTelegramLog } from "./telegram-log.server";
+import { handleAdminMessage, handleAdminCallback, isAdmin, showAdminMenu } from "./bot-admin.server";
 
 type TgUser = {
   id: number;
