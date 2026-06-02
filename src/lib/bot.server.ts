@@ -494,3 +494,75 @@ export async function autoPostMovieToChannel(movieId: string) {
   });
   return res;
 }
+
+// ============== USER-FACING SERIES BROWSE ==============
+const SER_PAGE = 8;
+
+async function showSeriesList(chatId: number, page: number, messageId?: number) {
+  const { data, count } = await sb().from("series").select("id,title,year", { count: "exact" })
+    .eq("is_published", true).order("created_at", { ascending: false })
+    .range(page * SER_PAGE, page * SER_PAGE + SER_PAGE - 1);
+  const total = count ?? 0;
+  if (!total) return sendMessage(chatId, "Hozircha seriallar yo‘q.");
+  const rows = (data ?? []).map((s: any) => [{ text: `📺 ${s.title}${s.year ? ` (${s.year})` : ""}`.slice(0, 60), callback_data: `ser:s:${s.id}` }]);
+  const pages = Math.max(1, Math.ceil(total / SER_PAGE));
+  const nav: any[] = [];
+  if (page > 0) nav.push({ text: "«", callback_data: `ser:list:${page - 1}` });
+  nav.push({ text: `${page + 1}/${pages}`, callback_data: "noop" });
+  if (page + 1 < pages) nav.push({ text: "»", callback_data: `ser:list:${page + 1}` });
+  if (nav.length) rows.push(nav);
+  const text = `📚 <b>Seriallar</b> (${total})\n\nTanlang 👇`;
+  if (messageId) try { return await editMessageText(chatId, messageId, text, { reply_markup: { inline_keyboard: rows } }); } catch {}
+  return sendMessage(chatId, text, { reply_markup: { inline_keyboard: rows } });
+}
+
+async function showSeriesDetail(chatId: number, seriesId: string, messageId?: number) {
+  const { data: s } = await sb().from("series").select("*").eq("id", seriesId).eq("is_published", true).maybeSingle();
+  if (!s) return sendMessage(chatId, "Topilmadi.");
+  const { data: seasons } = await sb().from("seasons").select("id,season_number").eq("series_id", seriesId).order("season_number");
+  const rows: any[][] = (seasons ?? []).map((se: any) => [{ text: `🎬 Mavsum ${se.season_number}`, callback_data: `ser:se:${se.id}` }]);
+  rows.push([{ text: "« Seriallar", callback_data: "ser:list:0" }]);
+  const text = [
+    `📺 <b>${escapeHtml(s.title)}</b>`,
+    [s.year, s.genre, s.country].filter(Boolean).map(escapeHtml).join(" • "),
+    s.description ? `\n${escapeHtml(s.description)}` : "",
+    `\nMavsumlar: ${seasons?.length ?? 0}`,
+  ].filter(Boolean).join("\n");
+  if (messageId) try { return await editMessageText(chatId, messageId, text, { reply_markup: { inline_keyboard: rows } }); } catch {}
+  return sendMessage(chatId, text, { reply_markup: { inline_keyboard: rows } });
+}
+
+async function showSeasonEpisodes(chatId: number, seasonId: string, messageId?: number) {
+  const { data: se } = await sb().from("seasons").select("*, series:series(id,title)").eq("id", seasonId).maybeSingle();
+  if (!se) return;
+  const { data: eps } = await sb().from("episodes").select("id,episode_number,title").eq("season_id", seasonId).order("episode_number");
+  const rows: any[][] = [];
+  (eps ?? []).forEach((e: any) => rows.push([{ text: `${e.episode_number}-qism${e.title ? ` • ${e.title}` : ""}`.slice(0, 60), callback_data: `ser:ep:${e.id}` }]));
+  rows.push([{ text: "« Serialga qaytish", callback_data: `ser:s:${(se as any).series.id}` }]);
+  const text = `📺 <b>${escapeHtml((se as any).series.title)}</b>\n🎬 Mavsum ${se.season_number}\nQismlar: ${eps?.length ?? 0}\n\nQismni tanlang 👇`;
+  if (messageId) try { return await editMessageText(chatId, messageId, text, { reply_markup: { inline_keyboard: rows } }); } catch {}
+  return sendMessage(chatId, text, { reply_markup: { inline_keyboard: rows } });
+}
+
+async function deliverEpisode(chatId: number, botUser: any, episodeId: string) {
+  const { data: e } = await sb().from("episodes").select("*, season:seasons(season_number, series:series(title))").eq("id", episodeId).maybeSingle();
+  if (!e) return sendMessage(chatId, "❌ Qism topilmadi.");
+  const seriesTitle = (e as any).season?.series?.title ?? "";
+  const caption = `📺 <b>${escapeHtml(seriesTitle)}</b>\n🎬 S${(e as any).season?.season_number}E${e.episode_number}${e.title ? ` — ${escapeHtml(e.title)}` : ""}`;
+  if (e.telegram_file_id) {
+    try { await sendVideo(chatId, e.telegram_file_id, caption); }
+    catch { await sendMessage(chatId, "⚠️ Videoni yuborishda xatolik."); }
+  } else {
+    await sendMessage(chatId, caption + "\n\n⚠️ Video hali yuklanmagan.");
+  }
+  await sb().from("episodes").update({ views_count: (e.views_count ?? 0) + 1 }).eq("id", e.id);
+}
+
+async function handleSeriesCallback(chatId: number, messageId: number | undefined, botUser: any, data: string) {
+  const parts = data.split(":");
+  const action = parts[1];
+  if (action === "list") return showSeriesList(chatId, parseInt(parts[2] ?? "0", 10) || 0, messageId);
+  if (action === "s") return showSeriesDetail(chatId, parts[2], messageId);
+  if (action === "se") return showSeasonEpisodes(chatId, parts[2], messageId);
+  if (action === "ep") return deliverEpisode(chatId, botUser, parts[2]);
+}
