@@ -406,6 +406,10 @@ export async function handleUpdate(update: any) {
     await sendMessage(chatId, "Menyu:", { reply_markup: mainMenuKeyboard() });
     return;
   }
+  if (text === "/admin" && await isAdmin(from.id)) {
+    await showAdminMenu(chatId);
+    return;
+  }
 
   // Menu buttons
   if (text === "🎬 Kino olish" || text === "🔎 Kod kiritish") {
