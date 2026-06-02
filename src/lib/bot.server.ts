@@ -5,6 +5,7 @@ import {
   sendPhoto,
   sendVideo,
   answerCallbackQuery,
+  editMessageText,
   mainMenuKeyboard,
   deepLink,
 } from "./telegram.server";
@@ -221,28 +222,102 @@ async function showProfile(chatId: number, botUser: any) {
   );
 }
 
-async function showNew(chatId: number) {
-  const { data } = await sb()
-    .from("movies")
-    .select("*")
-    .eq("is_published", true)
-    .order("created_at", { ascending: false })
-    .limit(10);
-  if (!data?.length) return sendMessage(chatId, "Hozircha kinolar yo'q.");
-  const txt = ["🆕 <b>Yangi kinolar</b>", "", ...data.map((m, i) => `${i + 1}. ${escapeHtml(m.title)} ${m.year ? `(${m.year})` : ""}`)].join("\n");
-  await sendMessage(chatId, txt);
+const PAGE_SIZE = 8;
+
+type CatalogSort = "new" | "top";
+
+async function fetchCatalog(sort: CatalogSort, genre: string | null, page: number) {
+  const from = page * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+  let q = sb().from("movies").select("id,title,year,views_count,genre", { count: "exact" }).eq("is_published", true);
+  if (genre) q = q.ilike("genre", `%${genre}%`);
+  q = sort === "top"
+    ? q.order("views_count", { ascending: false })
+    : q.order("created_at", { ascending: false });
+  const { data, count } = await q.range(from, to);
+  return { data: data ?? [], total: count ?? 0 };
 }
 
-async function showTop(chatId: number) {
-  const { data } = await sb()
-    .from("movies")
-    .select("*")
-    .eq("is_published", true)
-    .order("views_count", { ascending: false })
-    .limit(10);
-  if (!data?.length) return sendMessage(chatId, "Hozircha kinolar yo'q.");
-  const txt = ["🏆 <b>Top kinolar</b>", "", ...data.map((m, i) => `${i + 1}. ${escapeHtml(m.title)} — 👁 ${m.views_count}`)].join("\n");
-  await sendMessage(chatId, txt);
+function catalogKeyboard(items: any[], sort: CatalogSort, genre: string | null, page: number, total: number) {
+  const rows: any[][] = [];
+  for (let i = 0; i < items.length; i += 2) {
+    const row = items.slice(i, i + 2).map((m) => ({
+      text: `${m.title}${m.year ? ` (${m.year})` : ""}`.slice(0, 60),
+      callback_data: `mv:${m.id}`,
+    }));
+    rows.push(row);
+  }
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const nav: any[] = [];
+  const g = genre ?? "-";
+  if (page > 0) nav.push({ text: "« Oldingi", callback_data: `cat:${sort}:${g}:${page - 1}` });
+  nav.push({ text: `${page + 1}/${totalPages}`, callback_data: "noop" });
+  if (page + 1 < totalPages) nav.push({ text: "Keyingi »", callback_data: `cat:${sort}:${g}:${page + 1}` });
+  if (nav.length) rows.push(nav);
+  rows.push([
+    { text: sort === "new" ? "✅ 🆕 Yangi" : "🆕 Yangi", callback_data: `cat:new:${g}:0` },
+    { text: sort === "top" ? "✅ 🏆 Top" : "🏆 Top", callback_data: `cat:top:${g}:0` },
+  ]);
+  rows.push([{ text: "🎭 Janrlar", callback_data: "genres" }]);
+  return { inline_keyboard: rows };
+}
+
+function catalogTitle(sort: CatalogSort, genre: string | null, total: number) {
+  const head = sort === "top" ? "🏆 <b>Eng ko'p ko'rilgan kinolar</b>" : "🆕 <b>Yangi kinolar</b>";
+  const g = genre ? `\n🎭 Janr: <b>${escapeHtml(genre)}</b>` : "";
+  return `${head}${g}\n📚 Jami: ${total}\n\nKino tanlang 👇`;
+}
+
+async function showCatalog(chatId: number, sort: CatalogSort, genre: string | null, page: number) {
+  const { data, total } = await fetchCatalog(sort, genre, page);
+  if (!total) return sendMessage(chatId, "Hozircha kinolar yo'q.");
+  await sendMessage(chatId, catalogTitle(sort, genre, total), { reply_markup: catalogKeyboard(data, sort, genre, page, total) });
+}
+
+async function editCatalog(chatId: number, messageId: number, sort: CatalogSort, genre: string | null, page: number) {
+  const { data, total } = await fetchCatalog(sort, genre, page);
+  await editMessageText(chatId, messageId, catalogTitle(sort, genre, total), { reply_markup: catalogKeyboard(data, sort, genre, page, total) });
+}
+
+async function showGenres(chatId: number, messageId?: number) {
+  const { data } = await sb().from("movies").select("genre").eq("is_published", true).not("genre", "is", null);
+  const set = new Set<string>();
+  (data ?? []).forEach((r: any) => {
+    String(r.genre ?? "").split(/[,/]/).forEach((g) => {
+      const t = g.trim();
+      if (t) set.add(t);
+    });
+  });
+  const genres = [...set].sort().slice(0, 24);
+  const rows: any[][] = [];
+  for (let i = 0; i < genres.length; i += 3) {
+    rows.push(genres.slice(i, i + 3).map((g) => ({ text: g, callback_data: `cat:new:${g}:0` })));
+  }
+  rows.push([{ text: "🔄 Barchasi", callback_data: "cat:new:-:0" }]);
+  const text = genres.length ? "🎭 <b>Janrni tanlang</b>" : "🎭 Hozircha janrlar mavjud emas.";
+  const kb = { inline_keyboard: rows };
+  if (messageId) await editMessageText(chatId, messageId, text, { reply_markup: kb });
+  else await sendMessage(chatId, text, { reply_markup: kb });
+}
+
+async function deliverMovieById(chatId: number, botUser: any, movieId: string) {
+  const { data: movie } = await sb().from("movies").select("*").eq("id", movieId).eq("is_published", true).maybeSingle();
+  if (!movie) return sendMessage(chatId, "❌ Kino topilmadi.");
+  const caption = fmtMovieCaption(movie);
+  if (movie.poster_url) {
+    try { await sendPhoto(chatId, movie.poster_url, caption); } catch { await sendMessage(chatId, caption); }
+  } else {
+    await sendMessage(chatId, caption);
+  }
+  if (movie.telegram_file_id) {
+    try { await sendVideo(chatId, movie.telegram_file_id, `🎬 <b>${escapeHtml(movie.title)}</b>`); }
+    catch (e) { console.error("sendVideo failed", e); await sendMessage(chatId, "⚠️ Videoni yuborishda xatolik."); }
+  } else {
+    await sendMessage(chatId, "⚠️ Bu kino uchun video fayl hali yuklanmagan.");
+  }
+  await sb().from("movie_views").insert({ movie_id: movie.id, bot_user_id: botUser.id });
+  await sb().from("movies").update({ views_count: (movie.views_count ?? 0) + 1 }).eq("id", movie.id);
+  await sb().from("bot_users").update({ movies_watched: (botUser.movies_watched ?? 0) + 1 }).eq("id", botUser.id);
 }
 
 export async function handleUpdate(update: any) {
@@ -257,13 +332,27 @@ export async function handleUpdate(update: any) {
       callback_data: callback.data ?? null,
       request_payload: update,
     });
-    await answerCallbackQuery(callback.id, "Qabul qilindi");
-    if (callback.data?.startsWith("code:")) {
-      const chatId = callback.message?.chat?.id;
-      if (chatId && callback.from) {
-        const botUser = await upsertUser(callback.from as TgUser);
-        await deliverMovieByCode(chatId, botUser, callback.data.slice(5));
-      }
+    await answerCallbackQuery(callback.id);
+    const data = callback.data ?? "";
+    const chatId = callback.message?.chat?.id;
+    const messageId = callback.message?.message_id;
+    if (!chatId || !callback.from) return;
+    const botUser = await upsertUser(callback.from as TgUser);
+
+    if (data === "noop") return;
+    if (data === "genres") return showGenres(chatId, messageId);
+    if (data.startsWith("code:")) {
+      return deliverMovieByCode(chatId, botUser, data.slice(5));
+    }
+    if (data.startsWith("mv:")) {
+      return deliverMovieById(chatId, botUser, data.slice(3));
+    }
+    if (data.startsWith("cat:")) {
+      const [, sort, g, pageStr] = data.split(":");
+      const genre = g === "-" ? null : g;
+      const page = Math.max(0, parseInt(pageStr ?? "0", 10) || 0);
+      if (messageId) return editCatalog(chatId, messageId, sort as CatalogSort, genre, page);
+      return showCatalog(chatId, sort as CatalogSort, genre, page);
     }
     return;
   }
@@ -311,8 +400,9 @@ export async function handleUpdate(update: any) {
     await sendMessage(chatId, "🔢 Kino kodini yuboring:");
     return;
   }
-  if (text === "🆕 Yangi kinolar") return showNew(chatId);
-  if (text === "🏆 Top kinolar") return showTop(chatId);
+  if (text === "🆕 Yangi kinolar") return showCatalog(chatId, "new", null, 0);
+  if (text === "🏆 Top kinolar") return showCatalog(chatId, "top", null, 0);
+  if (text === "🎭 Janrlar") return showGenres(chatId);
   if (text === "👤 Profilim") return showProfile(chatId, botUser);
   if (text === "📞 Admin bilan bog'lanish") {
     const { data } = await sb().from("bot_settings").select("value").eq("key", "admin_contact").maybeSingle();

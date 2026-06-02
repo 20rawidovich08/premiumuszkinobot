@@ -62,6 +62,10 @@ export async function answerCallbackQuery(callbackQueryId: string, text?: string
   return tg("answerCallbackQuery", { callback_query_id: callbackQueryId, text });
 }
 
+export async function editMessageText(chatId: number | string, messageId: number, text: string, extra: Record<string, unknown> = {}) {
+  return tg("editMessageText", { chat_id: chatId, message_id: messageId, text, parse_mode: "HTML", ...extra });
+}
+
 export async function setWebhookUrl(url: string, secret: string) {
   return tg("setWebhook", {
     url,
@@ -84,7 +88,7 @@ export function mainMenuKeyboard() {
     keyboard: [
       [{ text: "🎬 Kino olish" }, { text: "🔎 Kod kiritish" }],
       [{ text: "🆕 Yangi kinolar" }, { text: "🏆 Top kinolar" }],
-      [{ text: "🎬 Kino buyurtma qilish" }],
+      [{ text: "🎭 Janrlar" }, { text: "🎬 Kino buyurtma qilish" }],
       [{ text: "👤 Profilim" }, { text: "📞 Admin bilan bog'lanish" }],
     ],
     resize_keyboard: true,
