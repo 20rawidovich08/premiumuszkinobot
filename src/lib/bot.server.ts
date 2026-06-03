@@ -374,7 +374,14 @@ export async function handleUpdate(update: any) {
   // /start [param]
   if (text.startsWith("/start")) {
     const param = text.replace(/^\/start(?:=|\s+)?/i, "").trim();
-    if (param) { await deliverMovieByCode(chatId, botUser, param); return; }
+    if (param) {
+      if (param.startsWith("ser_")) {
+        await showSeriesDetail(chatId, param.slice(4));
+        return;
+      }
+      await deliverMovieByCode(chatId, botUser, param);
+      return;
+    }
     // hide any old reply keyboard
     await sendMessage(chatId, "🔄", { reply_markup: removeKb }).catch(() => {});
     await sendMainMenu(chatId, from.first_name);
