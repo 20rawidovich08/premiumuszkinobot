@@ -46,6 +46,10 @@ export async function tg<T = any>(method: string, body: Record<string, unknown>)
   return json.result as T;
 }
 
+export async function tgSafe<T = any>(method: string, body: Record<string, unknown>): Promise<T | null> {
+  try { return await tg<T>(method, body); } catch { return null; }
+}
+
 export async function sendMessage(chatId: number | string, text: string, extra: Record<string, unknown> = {}) {
   return tg("sendMessage", { chat_id: chatId, text, parse_mode: "HTML", ...extra });
 }
@@ -58,12 +62,20 @@ export async function sendVideo(chatId: number | string, video: string, caption?
   return tg("sendVideo", { chat_id: chatId, video, caption, parse_mode: "HTML", ...extra });
 }
 
-export async function answerCallbackQuery(callbackQueryId: string, text?: string) {
-  return tg("answerCallbackQuery", { callback_query_id: callbackQueryId, text });
+export async function answerCallbackQuery(callbackQueryId: string, text?: string, showAlert = false) {
+  return tg("answerCallbackQuery", { callback_query_id: callbackQueryId, text, show_alert: showAlert });
 }
 
 export async function editMessageText(chatId: number | string, messageId: number, text: string, extra: Record<string, unknown> = {}) {
   return tg("editMessageText", { chat_id: chatId, message_id: messageId, text, parse_mode: "HTML", ...extra });
+}
+
+export async function deleteMessage(chatId: number | string, messageId: number) {
+  return tgSafe("deleteMessage", { chat_id: chatId, message_id: messageId });
+}
+
+export async function getChatMember(chatId: number | string, userId: number) {
+  return tgSafe<{ status: string }>("getChatMember", { chat_id: chatId, user_id: userId });
 }
 
 export async function setWebhookUrl(url: string, secret: string) {
@@ -83,15 +95,31 @@ export function deepLink(code: string) {
   return `https://t.me/${u}?start=${encodeURIComponent(code)}`;
 }
 
-export function mainMenuKeyboard() {
+// Inline asosiy menyu — barcha tugmalar callback orqali ishlaydi
+export function mainMenuInline() {
   return {
-    keyboard: [
-      [{ text: "🎬 Kino olish" }, { text: "🔎 Kod kiritish" }],
-      [{ text: "🆕 Yangi kinolar" }, { text: "🏆 Top kinolar" }],
-      [{ text: "📺 Seriallar" }, { text: "🎭 Janrlar" }],
-      [{ text: "🎬 Kino buyurtma qilish" }, { text: "👤 Profilim" }],
-      [{ text: "📞 Admin bilan bog'lanish" }],
+    inline_keyboard: [
+      [
+        { text: "🔎 Kod kiritish", callback_data: "m:code" },
+        { text: "🆕 Yangi kinolar", callback_data: "cat:new:-:0" },
+      ],
+      [
+        { text: "🏆 Top kinolar", callback_data: "cat:top:-:0" },
+        { text: "🎭 Janrlar", callback_data: "genres" },
+      ],
+      [
+        { text: "📺 Seriallar", callback_data: "ser:list:0" },
+        { text: "👤 Profilim", callback_data: "m:profile" },
+      ],
+      [
+        { text: "🎬 Kino buyurtma qilish", callback_data: "m:request" },
+      ],
+      [
+        { text: "📞 Admin bilan bog'lanish", callback_data: "m:contact" },
+      ],
     ],
-    resize_keyboard: true,
   };
 }
+
+// Reply keyboardni olib tashlash (eski tugmalarni yashirish uchun)
+export const removeKb = { remove_keyboard: true };
