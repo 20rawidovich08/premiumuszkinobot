@@ -430,13 +430,13 @@ export async function autoPostMovieToChannel(movieId: string) {
   const keyboard = { inline_keyboard: [[{ text: "▶️ TOMOSHA QILISH", url: deepLink(code!.code) }]] };
   let res: any;
   if (movie.poster_url) {
-    try { res = await sendPhoto(chId, movie.poster_url, caption, { reply_markup: keyboard }); }
-    catch { res = await sendMessage(chId, caption, { reply_markup: keyboard }); }
-  } else if (movie.telegram_file_id) {
-    // post video preview directly
-    try { res = await sendVideo(chId, movie.telegram_file_id, caption, { reply_markup: keyboard }); }
-    catch { res = await sendMessage(chId, caption, { reply_markup: keyboard }); }
+    try {
+      res = await sendPhoto(chId, movie.poster_url, caption, { reply_markup: keyboard });
+    } catch {
+      res = await sendMessage(chId, caption, { reply_markup: keyboard });
+    }
   } else {
+    // Poster bo'lmasa — faqat matn + tugma (video kanalga YUBORILMAYDI)
     res = await sendMessage(chId, caption, { reply_markup: keyboard });
   }
   await sb().from("channel_posts").insert({ movie_id: movieId, channel_id: chId, message_id: res.message_id });
