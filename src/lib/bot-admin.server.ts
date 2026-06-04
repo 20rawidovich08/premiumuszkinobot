@@ -88,10 +88,24 @@ export async function handleAdminMessage(chatId: number, botUser: any, msg: any)
   if (draft.step === "add_movie:video") {
     const video = msg.video || msg.document;
     if (!video?.file_id) { await sendMessage(chatId, "📹 Iltimos, kino <b>videosini</b> yuboring."); return true; }
-    // grab thumbnail as poster
+    // fallback: grab thumbnail in case admin skips poster
     const thumb = msg.video?.thumbnail?.file_id || msg.video?.thumb?.file_id || null;
-    await setDraft(botUser.id, { step: "add_movie:title", data: { file_id: video.file_id, poster_file_id: thumb } });
-    await sendMessage(chatId, "✅ Video qabul qilindi.\n\n✍️ Endi <b>kino nomini</b> yuboring:");
+    await setDraft(botUser.id, { step: "add_movie:poster", data: { file_id: video.file_id, poster_file_id: thumb } });
+    await sendMessage(chatId, "✅ Video qabul qilindi.\n\n🖼 Endi <b>kanal posti uchun rasm (poster)</b> yuboring.\n\nAgar videoning o'zidagi rasm yetarli bo'lsa <b>-</b> yuboring.");
+    return true;
+  }
+  if (draft.step === "add_movie:poster") {
+    let poster = draft.data.poster_file_id ?? null;
+    if (msg.photo && Array.isArray(msg.photo) && msg.photo.length) {
+      poster = msg.photo[msg.photo.length - 1].file_id;
+    } else if (text.trim() === "-") {
+      // keep thumbnail fallback
+    } else {
+      await sendMessage(chatId, "🖼 Iltimos, <b>rasm</b> yuboring yoki <b>-</b> yuboring.");
+      return true;
+    }
+    await setDraft(botUser.id, { step: "add_movie:title", data: { ...draft.data, poster_file_id: poster } });
+    await sendMessage(chatId, "✍️ Endi <b>kino nomini</b> yuboring:");
     return true;
   }
   if (draft.step === "add_movie:title") {
