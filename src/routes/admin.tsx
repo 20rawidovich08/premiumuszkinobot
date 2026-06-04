@@ -1,53 +1,98 @@
-import { createFileRoute, Outlet, Link, useRouterState } from "@tanstack/react-router";
+import { createFileRoute, Outlet, Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, Film, Users, Inbox, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, Film, Users, Inbox, Settings, LogOut, Sparkles } from "lucide-react";
+import {
+  Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu,
+  SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, useSidebar,
+} from "@/components/ui/sidebar";
 
 export const Route = createFileRoute("/admin")({ component: AdminLayout });
 
 const nav = [
-  { to: "/admin", label: "Boshqaruv", icon: LayoutDashboard, exact: true },
-  { to: "/admin/movies", label: "Kinolar", icon: Film },
-  { to: "/admin/users", label: "Foydalanuvchilar", icon: Users },
-  { to: "/admin/requests", label: "Buyurtmalar", icon: Inbox },
-  { to: "/admin/settings", label: "Sozlamalar", icon: Settings },
+  { to: "/admin", label: "Boshqaruv", icon: LayoutDashboard, exact: true, accent: "text-violet" },
+  { to: "/admin/movies", label: "Kinolar", icon: Film, accent: "text-magenta" },
+  { to: "/admin/users", label: "Foydalanuvchilar", icon: Users, accent: "text-cyan" },
+  { to: "/admin/requests", label: "Buyurtmalar", icon: Inbox, accent: "text-amber" },
+  { to: "/admin/settings", label: "Sozlamalar", icon: Settings, accent: "text-emerald" },
 ];
 
 function AdminLayout() {
-  const { session, loading, signOut } = useAuth();
+  const { session, loading } = useAuth();
   const navigate = useNavigate();
-  const path = useRouterState({ select: (s) => s.location.pathname });
-
-  useEffect(() => {
-    if (!loading && !session) navigate({ to: "/login" });
-  }, [loading, session, navigate]);
-
+  useEffect(() => { if (!loading && !session) navigate({ to: "/login" }); }, [loading, session, navigate]);
   if (loading || !session) {
     return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Yuklanmoqda…</div>;
   }
+  return (
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full bg-gradient-hero">
+        <AppSidebar />
+        <div className="flex-1 flex flex-col min-w-0">
+          <header className="h-14 flex items-center gap-3 border-b border-border/40 backdrop-blur-md bg-background/40 px-4 sticky top-0 z-30">
+            <SidebarTrigger />
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-magenta" />
+              <span className="text-sm text-muted-foreground">Admin paneli</span>
+            </div>
+          </header>
+          <main className="flex-1 overflow-x-auto"><Outlet /></main>
+        </div>
+      </div>
+    </SidebarProvider>
+  );
+}
+
+function AppSidebar() {
+  const { state } = useSidebar();
+  const collapsed = state === "collapsed";
+  const path = useRouterState({ select: (s) => s.location.pathname });
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
+  const isActive = (n: typeof nav[number]) => n.exact ? path === n.to : path.startsWith(n.to);
 
   return (
-    <div className="min-h-screen flex bg-background">
-      <aside className="w-60 shrink-0 bg-sidebar border-r border-sidebar-border flex flex-col">
-        <div className="px-5 py-5 text-lg font-bold flex items-center gap-2">
-          <Film className="h-5 w-5 text-primary" /> CineBot
+    <Sidebar collapsible="icon">
+      <SidebarContent>
+        <div className="px-4 py-5 flex items-center gap-2 border-b border-sidebar-border">
+          <div className="grid place-items-center h-8 w-8 rounded-lg btn-gradient">
+            <Film className="h-4 w-4" />
+          </div>
+          {!collapsed && (
+            <div className="font-display font-bold text-lg leading-none">
+              Cine<span className="text-gradient-primary">Bot</span>
+            </div>
+          )}
         </div>
-        <nav className="flex-1 px-2 space-y-1">
-          {nav.map((n) => {
-            const active = n.exact ? path === n.to : path.startsWith(n.to);
-            return (
-              <Link key={n.to} to={n.to} className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm ${active ? "bg-sidebar-primary text-sidebar-primary-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent"}`}>
-                <n.icon className="h-4 w-4" /> {n.label}
-              </Link>
-            );
-          })}
-        </nav>
-        <button onClick={() => signOut().then(() => navigate({ to: "/login" }))} className="m-2 flex items-center gap-2 rounded-md px-3 py-2 text-sm text-sidebar-foreground hover:bg-sidebar-accent">
-          <LogOut className="h-4 w-4" /> Chiqish
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {nav.map((n) => {
+                const active = isActive(n);
+                return (
+                  <SidebarMenuItem key={n.to}>
+                    <SidebarMenuButton asChild isActive={active} tooltip={n.label}>
+                      <Link to={n.to} className="flex items-center gap-3">
+                        <n.icon className={`h-4 w-4 ${active ? "" : n.accent}`} />
+                        {!collapsed && <span>{n.label}</span>}
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+      <div className="mt-auto p-2 border-t border-sidebar-border">
+        <button
+          onClick={() => signOut().then(() => navigate({ to: "/login" }))}
+          className="w-full flex items-center gap-3 rounded-md px-3 py-2 text-sm text-sidebar-foreground hover:bg-sidebar-accent transition"
+        >
+          <LogOut className="h-4 w-4 text-destructive" />
+          {!collapsed && <span>Chiqish</span>}
         </button>
-      </aside>
-      <main className="flex-1 overflow-x-auto"><Outlet /></main>
-    </div>
+      </div>
+    </Sidebar>
   );
 }
