@@ -440,6 +440,7 @@ export async function autoPostMovieToChannel(movieId: string) {
   if (!chId) throw new Error("TELEGRAM_CHANNEL_ID not configured");
   const { data: movie } = await sb().from("movies").select("*").eq("id", movieId).single();
   if (!movie) throw new Error("Movie not found");
+  if (!movie.poster_url) throw new Error("Kanal posti uchun poster rasm topilmadi");
   let { data: code } = await sb().from("movie_codes").select("*").eq("movie_id", movieId).eq("is_active", true)
     .order("created_at", { ascending: true }).limit(1).maybeSingle();
   if (!code) {
@@ -449,26 +450,7 @@ export async function autoPostMovieToChannel(movieId: string) {
   }
   const caption = fmtChannelCaption(movie);
   const keyboard = { inline_keyboard: [[{ text: "▶️ TOMOSHA QILISH", url: deepLink(code!.code) }]] };
-  let res: any;
-  if (movie.poster_url) {
-    try {
-      res = await sendPhoto(chId, movie.poster_url, caption, { reply_markup: keyboard });
-    } catch {
-      // poster file_id ishlamasa — videoning o'zini yuboramiz (Telegram preview rasmi avto chiqadi)
-      if (movie.telegram_file_id) {
-        try { res = await sendVideo(chId, movie.telegram_file_id, caption, { reply_markup: keyboard }); }
-        catch { res = await sendMessage(chId, caption, { reply_markup: keyboard }); }
-      } else {
-        res = await sendMessage(chId, caption, { reply_markup: keyboard });
-      }
-    }
-  } else if (movie.telegram_file_id) {
-    // Poster yo'q — videoning o'zini yuboramiz, Telegram avto preview rasm chiqaradi
-    try { res = await sendVideo(chId, movie.telegram_file_id, caption, { reply_markup: keyboard }); }
-    catch { res = await sendMessage(chId, caption, { reply_markup: keyboard }); }
-  } else {
-    res = await sendMessage(chId, caption, { reply_markup: keyboard });
-  }
+  const res: any = await sendPhoto(chId, movie.poster_url, caption, { reply_markup: keyboard });
   await sb().from("channel_posts").insert({ movie_id: movieId, channel_id: chId, message_id: res.message_id });
   return res;
 }
