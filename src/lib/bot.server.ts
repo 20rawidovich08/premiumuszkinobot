@@ -414,6 +414,27 @@ export async function handleUpdate(update: any) {
 }
 
 // ============== AVTO POST: KINO ==============
+function fmtChannelCaption(movie: any) {
+  const title = escapeHtml(movie.title);
+  const lang = escapeHtml(movie.language || "Oʻzbek tilida");
+  const quality = escapeHtml(movie.quality || "HD");
+  const year = escapeHtml(movie.year || "—");
+  return [
+    `🎥 Nomi: ${title}`,
+    "",
+    `🇺🇿${lang} ✅`,
+    "",
+    "╭───────────────────",
+    `├‣ ${title}`,
+    `├‣ ${lang}`,
+    `├‣ Sifati: ${quality}`,
+    `├‣ Yili: ${year}`,
+    "╰───────────────────",
+    "",
+    "Tomosha qilish tugmasini bosing🔰",
+  ].join("\n");
+}
+
 export async function autoPostMovieToChannel(movieId: string) {
   const chId = process.env.TELEGRAM_CHANNEL_ID;
   if (!chId) throw new Error("TELEGRAM_CHANNEL_ID not configured");
@@ -426,17 +447,26 @@ export async function autoPostMovieToChannel(movieId: string) {
     const { data: c2 } = await sb().from("movie_codes").insert({ code: auto, movie_id: movieId, mode: "unlimited" }).select("*").single();
     code = c2;
   }
-  const caption = fmtMovieCaption(movie) + `\n\n🔑 Kod: <code>${escapeHtml(code!.code)}</code>\n\n👇 Tomosha qilish uchun bosing`;
+  const caption = fmtChannelCaption(movie);
   const keyboard = { inline_keyboard: [[{ text: "▶️ TOMOSHA QILISH", url: deepLink(code!.code) }]] };
   let res: any;
   if (movie.poster_url) {
     try {
       res = await sendPhoto(chId, movie.poster_url, caption, { reply_markup: keyboard });
     } catch {
-      res = await sendMessage(chId, caption, { reply_markup: keyboard });
+      // poster file_id ishlamasa — videoning o'zini yuboramiz (Telegram preview rasmi avto chiqadi)
+      if (movie.telegram_file_id) {
+        try { res = await sendVideo(chId, movie.telegram_file_id, caption, { reply_markup: keyboard }); }
+        catch { res = await sendMessage(chId, caption, { reply_markup: keyboard }); }
+      } else {
+        res = await sendMessage(chId, caption, { reply_markup: keyboard });
+      }
     }
+  } else if (movie.telegram_file_id) {
+    // Poster yo'q — videoning o'zini yuboramiz, Telegram avto preview rasm chiqaradi
+    try { res = await sendVideo(chId, movie.telegram_file_id, caption, { reply_markup: keyboard }); }
+    catch { res = await sendMessage(chId, caption, { reply_markup: keyboard }); }
   } else {
-    // Poster bo'lmasa — faqat matn + tugma (video kanalga YUBORILMAYDI)
     res = await sendMessage(chId, caption, { reply_markup: keyboard });
   }
   await sb().from("channel_posts").insert({ movie_id: movieId, channel_id: chId, message_id: res.message_id });
