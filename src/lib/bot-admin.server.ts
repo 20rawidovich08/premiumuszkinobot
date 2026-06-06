@@ -134,7 +134,10 @@ export async function handleAdminMessage(chatId: number, botUser: any, msg: any)
     if (msg.photo && Array.isArray(msg.photo) && msg.photo.length) {
       poster = msg.photo[msg.photo.length - 1].file_id;
     } else if (text.trim() === "-") {
-      // keep thumbnail fallback (yoki null — autoPost videoning o'zini yuboradi)
+      if (!poster) {
+        await sendMessage(chatId, "⚠️ Bu videoda tayyor rasm topilmadi. Kanal posti uchun alohida <b>rasm</b> yuboring.");
+        return true;
+      }
     } else {
       await sendMessage(chatId, "🖼 Iltimos, <b>rasm</b> yuboring yoki <b>-</b> yuboring.");
       return true;
