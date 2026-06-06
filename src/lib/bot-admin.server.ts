@@ -88,41 +88,58 @@ export async function handleAdminMessage(chatId: number, botUser: any, msg: any)
   if (draft.step === "add_movie:video") {
     const video = msg.video || msg.document;
     if (!video?.file_id) { await sendMessage(chatId, "📹 Iltimos, kino <b>videosini</b> yuboring."); return true; }
-    // fallback: grab thumbnail in case admin skips poster
     const thumb = msg.video?.thumbnail?.file_id || msg.video?.thumb?.file_id || null;
-    await setDraft(botUser.id, { step: "add_movie:poster", data: { file_id: video.file_id, poster_file_id: thumb } });
-    await sendMessage(chatId, "✅ Video qabul qilindi.\n\n🖼 Endi <b>kanal posti uchun rasm (poster)</b> yuboring.\n\nAgar videoning o'zidagi rasm yetarli bo'lsa <b>-</b> yuboring.");
-    return true;
-  }
-  if (draft.step === "add_movie:poster") {
-    let poster = draft.data.poster_file_id ?? null;
-    if (msg.photo && Array.isArray(msg.photo) && msg.photo.length) {
-      poster = msg.photo[msg.photo.length - 1].file_id;
-    } else if (text.trim() === "-") {
-      // keep thumbnail fallback
-    } else {
-      await sendMessage(chatId, "🖼 Iltimos, <b>rasm</b> yuboring yoki <b>-</b> yuboring.");
-      return true;
-    }
-    await setDraft(botUser.id, { step: "add_movie:title", data: { ...draft.data, poster_file_id: poster } });
-    await sendMessage(chatId, "✍️ Endi <b>kino nomini</b> yuboring:");
+    await setDraft(botUser.id, { step: "add_movie:title", data: { file_id: video.file_id, thumb_file_id: thumb } });
+    await sendMessage(chatId, "✅ Video qabul qilindi.\n\n✍️ Endi <b>kino nomini</b> yuboring:");
     return true;
   }
   if (draft.step === "add_movie:title") {
     if (!text.trim()) { await sendMessage(chatId, "Iltimos, nomini matn ko'rinishida yuboring."); return true; }
-    await setDraft(botUser.id, { step: "add_movie:meta", data: { ...draft.data, title: text.trim() } });
-    await sendMessage(chatId, "📝 Yili, janri, davlatini yuboring:\n<code>2024 | Jangari | AQSh</code>\n\nO'tkazib yuborish: <b>-</b>");
+    await setDraft(botUser.id, { step: "add_movie:language", data: { ...draft.data, title: text.trim() } });
+    await sendMessage(chatId, "🌐 <b>Tilini</b> yuboring (masalan: <code>Oʻzbek tilida</code>):");
     return true;
   }
-  if (draft.step === "add_movie:meta") {
-    let year: number | null = null, genre: string | null = null, country: string | null = null;
-    if (text.trim() !== "-") {
-      const parts = text.split("|").map((s) => s.trim());
-      year = parseInt(parts[0] ?? "", 10) || null;
-      genre = parts[1] || null;
-      country = parts[2] || null;
+  if (draft.step === "add_movie:language") {
+    const language = text.trim() === "-" ? null : text.trim();
+    await setDraft(botUser.id, { step: "add_movie:quality", data: { ...draft.data, language } });
+    await sendMessage(chatId, "📺 <b>Sifatini</b> yuboring (masalan: <code>1080p</code>):");
+    return true;
+  }
+  if (draft.step === "add_movie:quality") {
+    const quality = text.trim() === "-" ? null : text.trim();
+    await setDraft(botUser.id, { step: "add_movie:year", data: { ...draft.data, quality } });
+    await sendMessage(chatId, "📅 <b>Yilini</b> yuboring (masalan: <code>2026</code>):");
+    return true;
+  }
+  if (draft.step === "add_movie:year") {
+    const year = parseInt(text.trim(), 10) || null;
+    await setDraft(botUser.id, { step: "add_movie:genre", data: { ...draft.data, year } });
+    await sendMessage(chatId, "🎭 <b>Janrini</b> yuboring (yoki <b>-</b>):");
+    return true;
+  }
+  if (draft.step === "add_movie:genre") {
+    const genre = text.trim() === "-" ? null : text.trim();
+    await setDraft(botUser.id, { step: "add_movie:country", data: { ...draft.data, genre } });
+    await sendMessage(chatId, "🌍 <b>Davlatini</b> yuboring (yoki <b>-</b>):");
+    return true;
+  }
+  if (draft.step === "add_movie:country") {
+    const country = text.trim() === "-" ? null : text.trim();
+    await setDraft(botUser.id, { step: "add_movie:poster", data: { ...draft.data, country } });
+    await sendMessage(chatId, "🖼 Endi <b>kanal posti uchun rasm (poster)</b> yuboring.\n\nAgar videoning o'zidagi rasm yetarli bo'lsa <b>-</b> yuboring.");
+    return true;
+  }
+  if (draft.step === "add_movie:poster") {
+    let poster = draft.data.thumb_file_id ?? null;
+    if (msg.photo && Array.isArray(msg.photo) && msg.photo.length) {
+      poster = msg.photo[msg.photo.length - 1].file_id;
+    } else if (text.trim() === "-") {
+      // keep thumbnail fallback (yoki null — autoPost videoning o'zini yuboradi)
+    } else {
+      await sendMessage(chatId, "🖼 Iltimos, <b>rasm</b> yuboring yoki <b>-</b> yuboring.");
+      return true;
     }
-    await setDraft(botUser.id, { step: "add_movie:code", data: { ...draft.data, year, genre, country } });
+    await setDraft(botUser.id, { step: "add_movie:code", data: { ...draft.data, poster_file_id: poster } });
     await sendMessage(chatId, "🔢 <b>Kino kodini</b> yuboring (faqat raqamlar, masalan: <code>123</code>):");
     return true;
   }
@@ -135,6 +152,7 @@ export async function handleAdminMessage(chatId: number, botUser: any, msg: any)
     const d = draft.data;
     const { data: ins, error } = await sb().from("movies").insert({
       title: d.title, year: d.year, genre: d.genre, country: d.country,
+      language: d.language, quality: d.quality,
       telegram_file_id: d.file_id, poster_url: d.poster_file_id, is_published: true,
     }).select("id").single();
     if (error) { await sendMessage(chatId, "❌ Xatolik: " + esc(error.message)); await setDraft(botUser.id, null); return true; }
