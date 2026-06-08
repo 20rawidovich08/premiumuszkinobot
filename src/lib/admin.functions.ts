@@ -324,3 +324,112 @@ export const getMe = createServerFn({ method: "GET" })
       profile,
     };
   });
+
+// ============ ACTIVITY FEED ============
+export const getActivityFeed = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.userId);
+    const [views, movies, posts, codes, requests] = await Promise.all([
+      supabaseAdmin.from("movie_views").select("id,created_at,movie_id,bot_user_id").order("created_at", { ascending: false }).limit(10),
+      supabaseAdmin.from("movies").select("id,title,created_at").order("created_at", { ascending: false }).limit(5),
+      supabaseAdmin.from("channel_posts").select("id,movie_id,created_at").order("created_at", { ascending: false }).limit(5),
+      supabaseAdmin.from("movie_codes").select("id,code,movie_id,created_at").order("created_at", { ascending: false }).limit(5),
+      supabaseAdmin.from("movie_requests").select("id,movie_name,created_at").order("created_at", { ascending: false }).limit(5),
+    ]);
+    const ids = new Set<string>();
+    (views.data ?? []).forEach((v) => v.movie_id && ids.add(v.movie_id));
+    (posts.data ?? []).forEach((p) => p.movie_id && ids.add(p.movie_id));
+    (codes.data ?? []).forEach((c) => c.movie_id && ids.add(c.movie_id));
+    const movieMap = new Map<string, string>();
+    if (ids.size) {
+      const { data: ms } = await supabaseAdmin.from("movies").select("id,title").in("id", Array.from(ids));
+      (ms ?? []).forEach((m) => movieMap.set(m.id, m.title));
+    }
+    const events: { kind: string; emoji: string; text: string; at: string }[] = [];
+    (views.data ?? []).forEach((v) => events.push({ kind: "view", emoji: "🟢", text: `Foydalanuvchi kod ishlatdi: ${movieMap.get(v.movie_id) ?? "kino"}`, at: v.created_at }));
+    (movies.data ?? []).forEach((m) => events.push({ kind: "movie", emoji: "🎬", text: `Yangi kino qo'shildi: ${m.title}`, at: m.created_at }));
+    (posts.data ?? []).forEach((p) => events.push({ kind: "post", emoji: "📢", text: `Kanalga post yuborildi: ${movieMap.get(p.movie_id) ?? "kino"}`, at: p.created_at }));
+    (codes.data ?? []).forEach((c) => events.push({ kind: "code", emoji: "🔑", text: `Yangi kod yaratildi: ${c.code} (${movieMap.get(c.movie_id) ?? "kino"})`, at: c.created_at }));
+    (requests.data ?? []).forEach((r) => events.push({ kind: "request", emoji: "📥", text: `Yangi buyurtma: ${r.movie_name}`, at: r.created_at }));
+    events.sort((a, b) => +new Date(b.at) - +new Date(a.at));
+    return events.slice(0, 25);
+  });
+
+export const getBotStatus = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.userId);
+    let bot = false;
+    try { const info: any = await getWebhookInfo(); bot = !!info?.ok; } catch {}
+    const channel = !!process.env.TELEGRAM_CHANNEL_ID;
+    const { count: activeCodes } = await supabaseAdmin
+      .from("movie_codes").select("*", { count: "exact", head: true }).eq("is_active", true);
+    return { bot, channel, activeCodes: activeCodes ?? 0 };
+  });
+
+// ============ CODES (global) ============
+export const listAllCodes = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.userId);
+    const { data } = await supabaseAdmin
+      .from("movie_codes")
+      .select("*, movie:movies(id,title,poster_url)")
+      .order("created_at", { ascending: false })
+      .limit(500);
+    return data ?? [];
+  });
+
+// ============ CHANNEL POSTS ============
+export const listChannelPosts = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.userId);
+    const { data } = await supabaseAdmin
+      .from("channel_posts")
+      .select("*, movie:movies(id,title,poster_url,year,genre,views_count)")
+      .order("created_at", { ascending: false })
+      .limit(200);
+    return data ?? [];
+  });
+
+// ============ SERIES ============
+export const listSeries = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.userId);
+    const { data } = await supabaseAdmin
+      .from("series").select("*").order("created_at", { ascending: false });
+    return data ?? [];
+  });
+
+// ============ STATS ============
+export const getStatsOverview = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.userId);
+    const since = new Date(Date.now() - 14 * 86400000).toISOString();
+    const [views, users, topMovies] = await Promise.all([
+      supabaseAdmin.from("movie_views").select("created_at").gte("created_at", since).limit(5000),
+      supabaseAdmin.from("bot_users").select("created_at").gte("created_at", since).limit(5000),
+      supabaseAdmin.from("movies").select("id,title,year,views_count,poster_url").order("views_count", { ascending: false }).limit(10),
+    ]);
+    const bucket = (rows: { created_at: string }[] | null) => {
+      const m = new Map<string, number>();
+      for (let i = 13; i >= 0; i--) {
+        const d = new Date(Date.now() - i * 86400000);
+        m.set(d.toISOString().slice(0, 10), 0);
+      }
+      (rows ?? []).forEach((r) => {
+        const k = r.created_at.slice(0, 10);
+        if (m.has(k)) m.set(k, (m.get(k) ?? 0) + 1);
+      });
+      return Array.from(m.entries()).map(([day, value]) => ({ day, value }));
+    };
+    return {
+      viewsSeries: bucket(views.data),
+      usersSeries: bucket(users.data),
+      topMovies: topMovies.data ?? [],
+    };
+  });

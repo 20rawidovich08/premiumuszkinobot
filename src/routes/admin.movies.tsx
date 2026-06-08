@@ -1,10 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { listMovies, upsertMovie, deleteMovie, postMovieToChannel } from "@/lib/admin.functions";
 import { toast } from "sonner";
-import { Plus, Trash2, Send, Pencil } from "lucide-react";
+import { Plus, Trash2, Send, Pencil, Search, Film, Eye, Star } from "lucide-react";
 
 export const Route = createFileRoute("/admin/movies")({ component: MoviesPage });
 
@@ -16,6 +16,16 @@ function MoviesPage() {
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({ queryKey: ["movies"], queryFn: () => list() });
   const [editing, setEditing] = useState<any | null>(null);
+  const [q, setQ] = useState("");
+
+  const filtered = useMemo(() => {
+    const items = data ?? [];
+    if (!q.trim()) return items;
+    const s = q.toLowerCase();
+    return items.filter((m: any) =>
+      [m.title, m.genre, m.country, String(m.year ?? "")].some((v) => (v ?? "").toLowerCase().includes(s))
+    );
+  }, [data, q]);
 
   const saveM = useMutation({
     mutationFn: (v: any) => save({ data: v }),
@@ -33,39 +43,75 @@ function MoviesPage() {
   });
 
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Kinolar</h1>
-        <button onClick={() => setEditing({})} className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
-          <Plus className="h-4 w-4" /> Kino qo‘shish
-        </button>
+    <div className="p-6 lg:p-10 space-y-6 max-w-[1600px] mx-auto">
+      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div>
+          <p className="text-sm text-muted-foreground">Kontent katalogi</p>
+          <h1 className="text-3xl md:text-4xl font-display font-bold">Kinolar</h1>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <input
+              value={q} onChange={(e) => setQ(e.target.value)}
+              placeholder="Qidirish — nomi, janri, yili…"
+              className="w-full md:w-80 pl-9 pr-3 py-2.5 rounded-xl bg-input border border-border text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+          <button onClick={() => setEditing({})} className="inline-flex items-center justify-center gap-2 rounded-xl btn-gradient px-4 py-2.5 text-sm font-medium">
+            <Plus className="h-4 w-4" /> Kino qo'shish
+          </button>
+        </div>
       </div>
-      {isLoading ? <p className="text-muted-foreground">Yuklanmoqda…</p> : (
-        <div className="glass-card rounded-xl overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/40 text-left">
-              <tr><th className="px-4 py-3">Nomi</th><th>Yili</th><th>Janr</th><th>Ko‘rishlar</th><th>Holat</th><th></th></tr>
-            </thead>
-            <tbody>
-              {(data ?? []).map((m: any) => (
-                <tr key={m.id} className="border-t border-border/40">
-                  <td className="px-4 py-3 font-medium">
-                    <Link to="/admin/movies/$id" params={{ id: m.id }} className="hover:text-primary">{m.title}</Link>
-                  </td>
-                  <td>{m.year ?? "—"}</td>
-                  <td className="text-muted-foreground">{m.genre ?? "—"}</td>
-                  <td>{m.views_count}</td>
-                  <td>{m.is_published ? "Eʼlon qilingan" : "Qoralama"}</td>
-                  <td className="text-right pr-3">
-                    <button onClick={() => postM.mutate(m.id)} title="Kanalga yuborish" className="p-2 hover:text-primary"><Send className="h-4 w-4" /></button>
-                    <button onClick={() => setEditing(m)} className="p-2 hover:text-primary"><Pencil className="h-4 w-4" /></button>
-                    <button onClick={() => confirm("O'chirish?") && delM.mutate(m.id)} className="p-2 hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
-                  </td>
-                </tr>
-              ))}
-              {!data?.length && <tr><td colSpan={6} className="text-center py-10 text-muted-foreground">Hali kino yo‘q.</td></tr>}
-            </tbody>
-          </table>
+
+      {isLoading ? (
+        <p className="text-muted-foreground">Yuklanmoqda…</p>
+      ) : !filtered.length ? (
+        <div className="glass-card rounded-2xl p-16 text-center">
+          <Film className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+          <p className="text-muted-foreground">Hech qanday kino topilmadi.</p>
+        </div>
+      ) : (
+        <div className="grid gap-5 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          {filtered.map((m: any) => (
+            <article key={m.id} className="group glass-card rounded-2xl overflow-hidden hover-lift flex flex-col">
+              <Link to="/admin/movies/$id" params={{ id: m.id }} className="block relative aspect-[2/3] bg-muted overflow-hidden">
+                {m.poster_url ? (
+                  <img src={m.poster_url} alt={m.title} className="w-full h-full object-cover transition group-hover:scale-105" />
+                ) : (
+                  <div className="w-full h-full grid place-items-center text-muted-foreground"><Film className="h-10 w-10" /></div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent opacity-90" />
+                <div className="absolute top-2 left-2 flex gap-1.5">
+                  {m.is_published ? (
+                    <span className="text-[10px] uppercase tracking-wider rounded-md px-1.5 py-0.5 bg-success/20 text-success border border-success/30">E'lon</span>
+                  ) : (
+                    <span className="text-[10px] uppercase tracking-wider rounded-md px-1.5 py-0.5 bg-muted text-muted-foreground border border-border">Qoralama</span>
+                  )}
+                </div>
+                {m.imdb_rating != null && (
+                  <div className="absolute top-2 right-2 inline-flex items-center gap-1 rounded-md bg-background/70 backdrop-blur px-1.5 py-0.5 text-[11px] font-medium">
+                    <Star className="h-3 w-3 text-amber" /> {m.imdb_rating}
+                  </div>
+                )}
+                <div className="absolute bottom-2 left-2 right-2">
+                  <div className="text-sm font-semibold leading-tight line-clamp-2">{m.title}</div>
+                  <div className="mt-1 text-[11px] text-muted-foreground flex items-center gap-2">
+                    {m.year && <span>{m.year}</span>}
+                    {m.genre && <span>• {m.genre}</span>}
+                  </div>
+                </div>
+              </Link>
+              <div className="p-3 flex items-center justify-between gap-2 border-t border-border/40">
+                <div className="text-xs text-muted-foreground inline-flex items-center gap-1"><Eye className="h-3 w-3" /> {m.views_count}</div>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => postM.mutate(m.id)} title="Kanalga yuborish" className="p-1.5 rounded-md hover:bg-accent/50 hover:text-emerald transition"><Send className="h-4 w-4" /></button>
+                  <button onClick={() => setEditing(m)} title="Tahrirlash" className="p-1.5 rounded-md hover:bg-accent/50 hover:text-primary transition"><Pencil className="h-4 w-4" /></button>
+                  <button onClick={() => confirm("O'chirilsinmi?") && delM.mutate(m.id)} title="O'chirish" className="p-1.5 rounded-md hover:bg-accent/50 hover:text-destructive transition"><Trash2 className="h-4 w-4" /></button>
+                </div>
+              </div>
+            </article>
+          ))}
         </div>
       )}
 
@@ -86,28 +132,28 @@ function MovieDialog({ initial, onClose, onSave, busy }: any) {
     ["quality", "Sifat"], ["duration_minutes", "Davomiyligi (daq)", "number"],
   ];
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-      <div className="glass-card rounded-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
-        <h2 className="text-xl font-bold mb-4">{initial?.id ? "Kinoni tahrirlash" : "Yangi kino"}</h2>
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+      <div className="glass-card-glow rounded-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
+        <h2 className="text-xl font-display font-bold mb-4">{initial?.id ? "Kinoni tahrirlash" : "Yangi kino"}</h2>
         <div className="grid grid-cols-2 gap-3">
           {fields.map(([k, label, t]) => (
             <div key={k} className={t === "textarea" ? "col-span-2" : ""}>
               <label className="text-xs text-muted-foreground">{label}</label>
               {t === "textarea" ? (
-                <textarea value={f[k] ?? ""} onChange={(e) => upd(k, e.target.value)} rows={3} className="mt-1 w-full rounded-md border border-border bg-input px-3 py-2 text-sm" />
+                <textarea value={f[k] ?? ""} onChange={(e) => upd(k, e.target.value)} rows={3} className="mt-1 w-full rounded-lg border border-border bg-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
               ) : (
-                <input type={t ?? "text"} value={f[k] ?? ""} onChange={(e) => upd(k, e.target.value)} className="mt-1 w-full rounded-md border border-border bg-input px-3 py-2 text-sm" />
+                <input type={t ?? "text"} value={f[k] ?? ""} onChange={(e) => upd(k, e.target.value)} className="mt-1 w-full rounded-lg border border-border bg-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
               )}
             </div>
           ))}
           <label className="col-span-2 flex items-center gap-2 text-sm">
             <input type="checkbox" checked={!!f.is_published} onChange={(e) => upd("is_published", e.target.checked)} />
-            Eʼlon qilingan
+            E'lon qilingan
           </label>
         </div>
         <div className="mt-6 flex justify-end gap-2">
-          <button onClick={onClose} className="rounded-md border border-border px-4 py-2 text-sm">Bekor qilish</button>
-          <button disabled={busy} onClick={() => onSave(f)} className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-60">Saqlash</button>
+          <button onClick={onClose} className="rounded-lg border border-border px-4 py-2 text-sm hover:bg-accent/40">Bekor qilish</button>
+          <button disabled={busy} onClick={() => onSave(f)} className="rounded-lg btn-gradient px-4 py-2 text-sm font-medium disabled:opacity-60">Saqlash</button>
         </div>
       </div>
     </div>

@@ -14,9 +14,13 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
+import { Route as AdminStatsRouteImport } from './routes/admin.stats'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
+import { Route as AdminSeriesRouteImport } from './routes/admin.series'
 import { Route as AdminRequestsRouteImport } from './routes/admin.requests'
+import { Route as AdminPostsRouteImport } from './routes/admin.posts'
 import { Route as AdminMoviesRouteImport } from './routes/admin.movies'
+import { Route as AdminCodesRouteImport } from './routes/admin.codes'
 import { Route as AdminMoviesIdRouteImport } from './routes/admin.movies.$id'
 import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/public/telegram/webhook'
 
@@ -45,9 +49,19 @@ const AdminUsersRoute = AdminUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminStatsRoute = AdminStatsRouteImport.update({
+  id: '/stats',
+  path: '/stats',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminSettingsRoute = AdminSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSeriesRoute = AdminSeriesRouteImport.update({
+  id: '/series',
+  path: '/series',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminRequestsRoute = AdminRequestsRouteImport.update({
@@ -55,9 +69,19 @@ const AdminRequestsRoute = AdminRequestsRouteImport.update({
   path: '/requests',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminPostsRoute = AdminPostsRouteImport.update({
+  id: '/posts',
+  path: '/posts',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminMoviesRoute = AdminMoviesRouteImport.update({
   id: '/movies',
   path: '/movies',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminCodesRoute = AdminCodesRouteImport.update({
+  id: '/codes',
+  path: '/codes',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminMoviesIdRoute = AdminMoviesIdRouteImport.update({
@@ -76,9 +100,13 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
+  '/admin/codes': typeof AdminCodesRoute
   '/admin/movies': typeof AdminMoviesRouteWithChildren
+  '/admin/posts': typeof AdminPostsRoute
   '/admin/requests': typeof AdminRequestsRoute
+  '/admin/series': typeof AdminSeriesRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/stats': typeof AdminStatsRoute
   '/admin/users': typeof AdminUsersRoute
   '/admin/': typeof AdminIndexRoute
   '/admin/movies/$id': typeof AdminMoviesIdRoute
@@ -87,9 +115,13 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/admin/codes': typeof AdminCodesRoute
   '/admin/movies': typeof AdminMoviesRouteWithChildren
+  '/admin/posts': typeof AdminPostsRoute
   '/admin/requests': typeof AdminRequestsRoute
+  '/admin/series': typeof AdminSeriesRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/stats': typeof AdminStatsRoute
   '/admin/users': typeof AdminUsersRoute
   '/admin': typeof AdminIndexRoute
   '/admin/movies/$id': typeof AdminMoviesIdRoute
@@ -100,9 +132,13 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
+  '/admin/codes': typeof AdminCodesRoute
   '/admin/movies': typeof AdminMoviesRouteWithChildren
+  '/admin/posts': typeof AdminPostsRoute
   '/admin/requests': typeof AdminRequestsRoute
+  '/admin/series': typeof AdminSeriesRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/stats': typeof AdminStatsRoute
   '/admin/users': typeof AdminUsersRoute
   '/admin/': typeof AdminIndexRoute
   '/admin/movies/$id': typeof AdminMoviesIdRoute
@@ -114,9 +150,13 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/login'
+    | '/admin/codes'
     | '/admin/movies'
+    | '/admin/posts'
     | '/admin/requests'
+    | '/admin/series'
     | '/admin/settings'
+    | '/admin/stats'
     | '/admin/users'
     | '/admin/'
     | '/admin/movies/$id'
@@ -125,9 +165,13 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/admin/codes'
     | '/admin/movies'
+    | '/admin/posts'
     | '/admin/requests'
+    | '/admin/series'
     | '/admin/settings'
+    | '/admin/stats'
     | '/admin/users'
     | '/admin'
     | '/admin/movies/$id'
@@ -137,9 +181,13 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/login'
+    | '/admin/codes'
     | '/admin/movies'
+    | '/admin/posts'
     | '/admin/requests'
+    | '/admin/series'
     | '/admin/settings'
+    | '/admin/stats'
     | '/admin/users'
     | '/admin/'
     | '/admin/movies/$id'
@@ -190,11 +238,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminUsersRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/stats': {
+      id: '/admin/stats'
+      path: '/stats'
+      fullPath: '/admin/stats'
+      preLoaderRoute: typeof AdminStatsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/settings': {
       id: '/admin/settings'
       path: '/settings'
       fullPath: '/admin/settings'
       preLoaderRoute: typeof AdminSettingsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/series': {
+      id: '/admin/series'
+      path: '/series'
+      fullPath: '/admin/series'
+      preLoaderRoute: typeof AdminSeriesRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/requests': {
@@ -204,11 +266,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRequestsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/posts': {
+      id: '/admin/posts'
+      path: '/posts'
+      fullPath: '/admin/posts'
+      preLoaderRoute: typeof AdminPostsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/movies': {
       id: '/admin/movies'
       path: '/movies'
       fullPath: '/admin/movies'
       preLoaderRoute: typeof AdminMoviesRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/codes': {
+      id: '/admin/codes'
+      path: '/codes'
+      fullPath: '/admin/codes'
+      preLoaderRoute: typeof AdminCodesRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/movies/$id': {
@@ -241,17 +317,25 @@ const AdminMoviesRouteWithChildren = AdminMoviesRoute._addFileChildren(
 )
 
 interface AdminRouteChildren {
+  AdminCodesRoute: typeof AdminCodesRoute
   AdminMoviesRoute: typeof AdminMoviesRouteWithChildren
+  AdminPostsRoute: typeof AdminPostsRoute
   AdminRequestsRoute: typeof AdminRequestsRoute
+  AdminSeriesRoute: typeof AdminSeriesRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
+  AdminStatsRoute: typeof AdminStatsRoute
   AdminUsersRoute: typeof AdminUsersRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminCodesRoute: AdminCodesRoute,
   AdminMoviesRoute: AdminMoviesRouteWithChildren,
+  AdminPostsRoute: AdminPostsRoute,
   AdminRequestsRoute: AdminRequestsRoute,
+  AdminSeriesRoute: AdminSeriesRoute,
   AdminSettingsRoute: AdminSettingsRoute,
+  AdminStatsRoute: AdminStatsRoute,
   AdminUsersRoute: AdminUsersRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
